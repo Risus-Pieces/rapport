@@ -1,5 +1,4 @@
 import { createInterface } from "node:readline/promises";
-import { count } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema";
 import { createOwner } from "@/lib/owner";
@@ -48,8 +47,16 @@ function askHidden(prompt: string): Promise<string> {
 
 async function main() {
   if (!process.stdin.isTTY) throw new Error("Run this in an interactive terminal: npm run seed:owner");
-  const [{ existing }] = await db.select({ existing: count() }).from(user);
-  if (existing > 0) throw new Error("An owner account already exists. Remove it first to start over.");
+  const existing = await db.select({ email: user.email }).from(user).limit(5);
+  if (existing.length > 0) {
+    throw new Error(
+      [
+        `An owner account already exists (${existing.map((row) => row.email).join(", ")}), so seeding is refused.`,
+        "Addresses ending in @example.test are leftovers from interrupted test runs and are safe to delete.",
+        "Do NOT delete a real owner by hand: every CRM table cascades from the user, so that would delete all CRM data.",
+      ].join("\n"),
+    );
+  }
 
   const email = await ask("Owner email: ");
   const name = (await ask("Display name [Owner]: ")) || "Owner";
@@ -61,10 +68,19 @@ async function main() {
   console.log(`Created owner ${email}. You can now sign in at /login.`);
 }
 
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    // DrizzleQueryError messages embed the bound query parameters (including password hashes);
+    // its cause is the plain driver error.
+    return error.cause instanceof Error ? error.cause.message : error.message;
+  }
+  return String(error);
+}
+
 main().then(
   () => process.exit(0),
   (error) => {
-    console.error(error instanceof Error ? error.message : error);
+    console.error(describeError(error));
     process.exit(1);
   },
 );
