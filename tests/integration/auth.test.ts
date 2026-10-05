@@ -1,12 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { hasDevDb } from "./db-guard";
 
-const hasEnv = Boolean(
-  process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_URL,
-);
-
-describe.skipIf(!hasEnv)("owner auth (runs against the Neon dev branch)", () => {
+describe.skipIf(!hasDevDb)("owner auth (runs against the Neon dev branch)", () => {
   type Mods = {
     auth: typeof import("@/lib/auth").auth;
     createOwner: typeof import("@/lib/owner").createOwner;

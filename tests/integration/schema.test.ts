@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-const hasDb = Boolean(
-  process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_URL,
-);
+import { hasDevDb } from "./db-guard";
 
 type Db = typeof import("@/db").db;
 type Schema = typeof import("@/db/schema");
@@ -14,7 +11,7 @@ function pgCode(error: unknown): string | undefined {
   return e.cause?.code ?? e.code;
 }
 
-describe.skipIf(!hasDb)("domain schema (runs against the Neon dev branch)", () => {
+describe.skipIf(!hasDevDb)("domain schema (runs against the Neon dev branch)", () => {
   let db: Db;
   let s: Schema;
   const userId = randomUUID();
