@@ -19,17 +19,23 @@ export function LoginForm() {
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError(null);
-    const { error: signInError } = await authClient.signIn.email({
-      email: String(form.get("email") ?? "").trim(),
-      password: String(form.get("password") ?? ""),
-    });
-    if (signInError) {
-      setError(signInError.message ?? "Could not sign in. Try again.");
+    try {
+      const { error: signInError } = await authClient.signIn.email({
+        email: String(form.get("email") ?? "").trim(),
+        password: String(form.get("password") ?? ""),
+      });
+      if (signInError) {
+        setError(signInError.message || "Could not sign in. Try again.");
+        setPending(false);
+        return;
+      }
+      // Stay disabled while the redirect and refresh happen.
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
       setPending(false);
-      return;
     }
-    router.replace("/");
-    router.refresh();
   }
 
   return (
