@@ -9,13 +9,13 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 + shadcn/ui · Neon Postgre
 ## Setup
 
 1. Create a Neon project with two branches: `main` (production) and `dev` (local). If your Neon account is managed by Vercel, the Neon CLI cannot create projects there; create the database from Vercel instead (Storage → Create Database → Neon), then add a `dev` branch in the Neon console.
-2. Copy `.env.example` to `.env.local` and fill in the `dev` branch's pooled and direct connection strings, a `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) and `BETTER_AUTH_URL`.
+2. Copy `.env.example` to `.env.local` and fill in the `dev` branch's pooled and direct connection strings, a `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) and `BETTER_AUTH_URL`. The file also needs `NEON_BRANCH=dev`, a safety label that confirms `DATABASE_URL` is the Neon dev branch (see the `npm test` row below).
 3. Install, migrate, create the owner, run:
 
 ```bash
 npm install
 npm run db:migrate
-npm run seed:owner   # interactive: email and password for the one owner account
+npm run seed:owner   # interactive: asks for the owner's email, display name and password (entered twice)
 npm run dev
 ```
 
@@ -26,7 +26,7 @@ Public sign-up is closed; the seed script is the only way to create the owner.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the dev server |
-| `npm test` | Unit tests, plus integration tests against the Neon `dev` branch when `.env.local` is present |
+| `npm test` | Unit tests, plus integration tests that write to the database in DATABASE_URL. They run only when the three env vars are set and `NEON_BRANCH=dev` confirms it is the Neon dev branch; they refuse to run otherwise. Never point `.env.local` at `main`. |
 | `npm run typecheck` / `npm run lint` | Static checks |
 | `npm run db:generate` | Generate a migration after editing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations to the branch in `DATABASE_URL_UNPOOLED` |
