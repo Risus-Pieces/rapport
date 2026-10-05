@@ -61,4 +61,23 @@ describe.skipIf(!hasEnv)("owner auth (runs against the Neon dev branch)", () => 
       m.createOwner({ email: `short-${tag}@example.test`, name: "Short", password: "short" }),
     ).rejects.toThrow(/at least 12/);
   });
+
+  it.each(["me@gmail", "owner@localhost", "a b@x.com", "not-an-email"])(
+    "createOwner rejects the invalid email %j before touching the database",
+    async (badEmail) => {
+      await expect(
+        m.createOwner({ email: badEmail, name: "X", password: "a-long-enough-password" }),
+      ).rejects.toThrow(/valid email/);
+    },
+  );
+
+  it("createOwner rejects a password longer than 128 characters", async () => {
+    await expect(
+      m.createOwner({
+        email: `long-${tag}@example.test`,
+        name: "Long",
+        password: "a".repeat(129),
+      }),
+    ).rejects.toThrow(/at most 128/);
+  });
 });
