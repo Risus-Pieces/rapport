@@ -42,10 +42,7 @@ export function CommandPalette() {
   useEffect(() => {
     const text = query.trim();
     const ticket = ++latest.current;
-    if (text.length < 2) {
-      // Clearing is handled by the render below, which ignores hits for short queries.
-      return;
-    }
+    if (text.length < 2) return;
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -89,7 +86,12 @@ export function CommandPalette() {
             <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             <Command.Input
               value={query}
-              onValueChange={setQuery}
+              onValueChange={(value) => {
+                setQuery(value);
+                // Drop the previous query's results right away so Enter cannot open a stale one.
+                setHits([]);
+                setSearching(false);
+              }}
               placeholder="Search people and deals, or jump to a page"
               className="h-14 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
             />

@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Upload } from "lucide-react";
 import { importContactsAction, type ImportState } from "@/app/actions/import";
-import { IMPORT_ERRORS_SHOWN } from "@/lib/contact-import";
+import { IMPORT_ERRORS_SHOWN, MAX_IMPORT_BYTES } from "@/lib/contact-import";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,27 @@ const initial: ImportState = { message: null, created: 0, duplicates: 0, errors:
 
 export function ImportForm() {
   const [state, action, pending] = useActionState(importContactsAction, initial);
+  const [tooBig, setTooBig] = useState(false);
   return (
     <form key={state.ran} action={action} className="space-y-3">
       <div className="space-y-2">
         <Label htmlFor="import-file">CSV file</Label>
-        <Input id="import-file" name="file" type="file" accept=".csv,text/csv" required className="h-auto py-2.5" />
+        <Input
+          id="import-file"
+          name="file"
+          type="file"
+          accept=".csv,text/csv"
+          required
+          className="h-auto py-2.5"
+          onChange={(event) => setTooBig((event.target.files?.[0]?.size ?? 0) > MAX_IMPORT_BYTES)}
+        />
+        {tooBig ? (
+          <p role="alert" className="text-sm text-destructive">
+            That file is over 1 MB. Split it and import the parts.
+          </p>
+        ) : null}
       </div>
-      <Button type="submit" size="lg" disabled={pending}>
+      <Button type="submit" size="lg" disabled={pending || tooBig}>
         <Upload aria-hidden />
         {pending ? "Importing…" : "Import contacts"}
       </Button>

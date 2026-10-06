@@ -14,6 +14,9 @@ export type ImportPlan = {
   errors: { line: number; message: string }[];
 };
 
+// Form field names back to the CSV column names the person actually has.
+const COLUMN_NAMES: Record<string, string> = { linkedinUrl: "linkedin_url" };
+
 export const importKey = (section: string, name: string, email: string | null) =>
   `${section}|${(email?.trim() || name.trim()).toLowerCase()}`;
 
@@ -51,7 +54,7 @@ export function planContactImport(rows: CsvTable["rows"], existing: Set<string>)
     });
     if (!parsed.success) {
       const [field, message] = Object.entries(fieldErrors(parsed.error))[0];
-      plan.errors.push({ line, message: `${field}: ${message}` });
+      plan.errors.push({ line, message: `${COLUMN_NAMES[field] ?? field}: ${message}` });
       continue;
     }
     const key = importKey(section, parsed.data.name, parsed.data.email);

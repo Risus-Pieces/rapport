@@ -45,5 +45,6 @@ describe("planContactImport", () => {
   it("rejects links that are not http(s)", () => {
     const result = plan("name,linkedin_url\nA,javascript:alert(1)\n");
     expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toMatch(/^linkedin_url:/);
   });
 });
