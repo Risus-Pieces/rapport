@@ -17,7 +17,7 @@ export async function StubPage({ title, description, accent, icon, phase }: Stub
   return (
     <>
       <PageHeader title={title} description={description} accent={accent} />
-      <EmptyState icon={icon} title={`${title} is on its way`}>
+      <EmptyState icon={icon} title="Coming soon">
         {phase}
       </EmptyState>
     </>
