@@ -5,9 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-instrument-serif);
   --font-heading: var(--font-sans);
 
   --color-background: var(--background);
@@ -29,96 +28,110 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-prio-gone: var(--prio-gone);
-  --color-prio-low: var(--prio-low);
-  --color-prio-medium: var(--prio-medium);
-  --color-prio-high: var(--prio-high);
-  --color-prio-very-high: var(--prio-very-high);
+  /* Section colors: dot, soft chip background, ink chip text */
   --color-section-restaurants: var(--section-restaurants);
+  --color-section-restaurants-soft: var(--section-restaurants-soft);
+  --color-section-restaurants-ink: var(--section-restaurants-ink);
   --color-section-investors: var(--section-investors);
+  --color-section-investors-soft: var(--section-investors-soft);
+  --color-section-investors-ink: var(--section-investors-ink);
   --color-section-general: var(--section-general);
+  --color-section-general-soft: var(--section-general-soft);
+  --color-section-general-ink: var(--section-general-ink);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  /* One knob: --radius is the card radius (rounded-2xl = 16px).
+     rounded-xl = 12px controls, rounded-3xl = 24px panels; buttons use rounded-full. */
+  --radius-sm: calc(var(--radius) * 0.375);
+  --radius-md: calc(var(--radius) * 0.5);
+  --radius-lg: calc(var(--radius) * 0.625);
+  --radius-xl: calc(var(--radius) * 0.75);
+  --radius-2xl: var(--radius);
+  --radius-3xl: calc(var(--radius) * 1.5);
+  --radius-4xl: calc(var(--radius) * 2);
 }
 
-/* Light theme: warm paper, darker brass for contrast */
+/* Light theme: the "Studio" alternative */
 :root {
-  --radius: 0.5rem;
-  --background: #f7f4ee;
-  --foreground: #1b1a17;
-  --card: #fffdf9;
-  --card-foreground: #1b1a17;
-  --popover: #fffdf9;
-  --popover-foreground: #1b1a17;
-  --primary: #8f6b2a;
-  --primary-foreground: #fffdf9;
-  --secondary: #ece7dc;
-  --secondary-foreground: #1b1a17;
-  --muted: #ece7dc;
-  --muted-foreground: #6b6558;
-  --accent: #efe9dc;
-  --accent-foreground: #1b1a17;
-  --destructive: #b3372a;
-  --border: #ddd6c7;
-  --input: #d8d0bf;
-  --ring: #8f6b2a;
+  --radius: 1rem;
+  --background: #f5f4fb;
+  --foreground: #1e1b3a;
+  --card: #ffffff;
+  --card-foreground: #1e1b3a;
+  --popover: #ffffff;
+  --popover-foreground: #1e1b3a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f0eff9;
+  --secondary-foreground: #1e1b3a;
+  --muted: #f0eff9;
+  --muted-foreground: #676484; /* brief #6b6889, nudged for 4.5:1 on the active pill */
+  --accent: #e7e5ff;
+  --accent-foreground: #1e1b3a;
+  --destructive: #c4302b;
+  --border: #e8e6f2;
+  --input: #8a86ab; /* brief #8e8ab0, nudged for 3:1 on page and input fill */
+  --ring: #4f46e5;
 
-  --prio-gone: #8a867d;
-  --prio-low: #3f78b8;
-  --prio-medium: #9a7a2e;
-  --prio-high: #c4691f;
-  --prio-very-high: #c2483a;
-
-  --section-restaurants: #c4691f;
-  --section-investors: #3f78b8;
-  --section-general: #8f6b2a;
+  --section-restaurants: #d9532f;
+  --section-restaurants-soft: #ffe3da;
+  --section-restaurants-ink: #8a2a10;
+  --section-investors: #2f66d9;
+  --section-investors-soft: #e3e6ff;
+  --section-investors-ink: #2a2d8c;
+  --section-general: #0f8f66;
+  --section-general-soft: #d7f4e6;
+  --section-general-ink: #0b5a38;
 }
 
-/* Dark theme (default): the "Obsidian Dossier" palette */
+/* Dark theme (default): the "Studio" look */
 .dark {
-  --background: #0a0a09;
-  --foreground: #e2ddd5;
-  --card: #111110;
-  --card-foreground: #e2ddd5;
-  --popover: #151514;
-  --popover-foreground: #e2ddd5;
-  --primary: #c9a96e;
-  --primary-foreground: #0c0c0b;
-  --secondary: #1a1916;
-  --secondary-foreground: #e2ddd5;
-  --muted: #1a1916;
-  --muted-foreground: #8b867d;
-  --accent: #1e1d1a;
-  --accent-foreground: #e2ddd5;
-  --destructive: #e0614f;
-  --border: #262522;
-  --input: #2a2926;
-  --ring: #c9a96e;
+  --background: #0e0d17;
+  --foreground: #ecebfa;
+  --card: #161525;
+  --card-foreground: #ecebfa;
+  --popover: #161525;
+  --popover-foreground: #ecebfa;
+  --primary: #8b84ff;
+  --primary-foreground: #0e0d17;
+  --secondary: #1c1b2e;
+  --secondary-foreground: #ecebfa;
+  --muted: #1c1b2e;
+  --muted-foreground: #9794b8;
+  --accent: #26244a;
+  --accent-foreground: #ecebfa;
+  --destructive: #ff7a7a;
+  --border: #2a2840;
+  --input: #6a6794;
+  --ring: #8b84ff;
 
-  --prio-gone: #4a4946;
-  --prio-low: #6a9fd8;
-  --prio-medium: #c9a96e;
-  --prio-high: #e0915a;
-  --prio-very-high: #e07b6a;
-
-  --section-restaurants: #e0915a;
-  --section-investors: #6a9fd8;
-  --section-general: #c9a96e;
+  --section-restaurants: #ff8a73;
+  --section-restaurants-soft: #3a211d;
+  --section-restaurants-ink: #ffb8a8;
+  --section-investors: #6ea8ff;
+  --section-investors-soft: #1e2a44;
+  --section-investors-ink: #a9c8ff;
+  --section-general: #5fd8a4;
+  --section-general-soft: #17352b;
+  --section-general-ink: #9bebc9;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   html {
     @apply font-sans antialiased;
+    /* Only weights 400 and 500 are loaded: never fake a bold. */
+    font-synthesis-weight: none;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Opaque, always-visible keyboard focus. Components that draw their own
+     ring (buttons, inputs) switch this off with outline-hidden. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 30%, transparent);

@@ -20,7 +20,7 @@ CSV import/export) organised into three sections — **Restaurants**,
 | Architecture | One shared CRM engine; each section is a config (pipeline stages, extra fields, labels), not separate tables. |
 | Users | One owner, login required, public sign-up closed. |
 | Sections | Restaurants = accounts sold to (pipeline). Investors = fundraising pipeline of both **angels** and **institutions**. General = relationship-cadence tracker (friends, family, professional) with priorities. |
-| Look | Dark theme (the old "Obsidian Dossier" palette) as default, plus a light theme. Built on the shadcn components already in the repo. |
+| Look | "Studio": dark by default with a light alternative, Plus Jakarta Sans throughout, section colors (Restaurants coral, Investors blue, General green), pill buttons, rounded cards and no shadows. Built on the shadcn components already in the repo. |
 
 ## Data model
 
@@ -119,8 +119,8 @@ Very High 15, High 30, Medium 90, Low 180. Gone and null mean no reminder.
 - Reminders are available on any contact. The General contact form defaults
   priority to High; Restaurants and Investors contacts default to none (null).
 
-Priority colors: Gone `#4a4946`, Low `#6a9fd8`, Medium `#c9a96e`,
-High `#e0915a`, Very High `#e07b6a`.
+Priority is shown as a 4-step signal meter plus a text label; color is
+reserved for sections.
 
 ## Screens and navigation
 

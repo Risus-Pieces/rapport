@@ -9,7 +9,7 @@ export function PageHeader({ title, description, accent, actions }: PageHeaderPr
   return (
     <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="space-y-1">
-        <h1 className="flex items-center gap-3 font-serif text-3xl tracking-tight md:text-4xl">
+        <h1 className="flex items-center gap-3 text-2xl font-medium tracking-tight md:text-[28px]">
           {accent ? (
             <span
               aria-hidden
