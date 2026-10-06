@@ -88,6 +88,9 @@ describe("money", () => {
     expect(parseDollars("250,000")).toBe(25_000_000);
     expect(parseDollars("$1,500.50")).toBe(150_050);
     expect(parseDollars("  ")).toBeNull();
+    expect(parseDollars(".5")).toBe(50);
+    expect(parseDollars("1.")).toBe(100);
+    expect(parseDollars(".")).toBe("invalid");
     expect(parseDollars("12.345")).toBe("invalid");
     expect(parseDollars("-5")).toBe("invalid");
     expect(parseDollars("abc")).toBe("invalid");

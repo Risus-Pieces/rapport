@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropSortKey, moveCard, type BoardCard } from "./board";
+import { dropSortKey, moveCard, needsRenumber, type BoardCard } from "./board";
 
 const cards: BoardCard[] = [
   { id: "a", stage: "lead", sortKey: 1 },
@@ -23,11 +23,15 @@ describe("dropSortKey", () => {
     expect(dropSortKey(cards, "x", "lead", "a")).toBeLessThan(1);
   });
 
-  it("ignores the dragged card itself when reordering inside a column", () => {
-    // moving c before b: neighbours are a (1) and b (2)
+  it("moving up in the same column puts the card before the target", () => {
     expect(dropSortKey(cards, "c", "lead", "b")).toBe(1.5);
-    // dropping a on b within the same column: b is first once a is removed
-    expect(dropSortKey(cards, "a", "lead", "b")).toBeLessThan(2);
+  });
+
+  it("moving down in the same column puts the card after the target", () => {
+    // a dropped on b: a must end up between b (2) and c (3)
+    expect(dropSortKey(cards, "a", "lead", "b")).toBe(2.5);
+    // a dropped on the last card goes to the very end
+    expect(dropSortKey(cards, "a", "lead", "c")).toBe(4);
   });
 
   it("falls back to the end when the target card is unknown", () => {
@@ -40,5 +44,21 @@ describe("moveCard", () => {
     const moved = moveCard(cards, "a", "tasting", 11);
     expect(moved.find((c) => c.id === "a")).toEqual({ id: "a", stage: "tasting", sortKey: 11 });
     expect(moved.filter((c) => c.id !== "a")).toEqual(cards.filter((c) => c.id !== "a"));
+  });
+});
+
+describe("needsRenumber", () => {
+  it("flags keys that are nearly equal or tied", () => {
+    expect(needsRenumber([1, 2, 3])).toBe(false);
+    expect(needsRenumber([1, 1, 3])).toBe(true);
+    expect(needsRenumber([1, 1 + 1e-9])).toBe(true);
+    expect(needsRenumber([])).toBe(false);
+  });
+
+  it("detects the collapse after repeated halving of one gap", () => {
+    let low = 1;
+    const high = 2;
+    for (let i = 0; i < 60; i++) low = (low + high) / 2;
+    expect(needsRenumber([low, high])).toBe(true);
   });
 });

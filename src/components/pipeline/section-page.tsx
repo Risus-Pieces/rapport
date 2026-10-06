@@ -126,7 +126,7 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
         </EmptyState>
       ) : null}
 
-      {view === "pipeline" && deals.length > 0 ? <Board section={section} deals={deals} /> : null}
+      {view === "pipeline" && deals.length > 0 ? <Board section={section} deals={deals} locked={Boolean(q || type)} /> : null}
 
       {view === "list" && deals.length > 0 ? (
         <Card className="p-2">

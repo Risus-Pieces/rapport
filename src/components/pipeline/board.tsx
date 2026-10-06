@@ -13,8 +13,10 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { moveDealAction } from "@/app/actions/deals";
@@ -54,8 +56,8 @@ function CardBody({ deal, section }: { deal: BoardDeal; section: PipelineSection
   );
 }
 
-function DealCard({ deal, section }: { deal: BoardDeal; section: PipelineSection }) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: deal.id });
+function DealCard({ deal, section, locked }: { deal: BoardDeal; section: PipelineSection; locked: boolean }) {
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: deal.id, disabled: locked });
   const { setNodeRef: setDropRef } = useDroppable({ id: `card:${deal.id}` });
   return (
     <li
@@ -65,7 +67,6 @@ function DealCard({ deal, section }: { deal: BoardDeal; section: PipelineSection
       }}
       {...attributes}
       {...listeners}
-      aria-label={`${deal.title}. Press space to pick up, then use arrow keys to move between stages.`}
       className={cn(
         "touch-manipulation rounded-xl border border-border bg-card p-3 transition-colors hover:border-input",
         isDragging && "opacity-40",
@@ -78,7 +79,7 @@ function DealCard({ deal, section }: { deal: BoardDeal; section: PipelineSection
   );
 }
 
-function Column({ stageKey, label, outcome, deals, section }: { stageKey: string; label: string; outcome: string; deals: BoardDeal[]; section: PipelineSection }) {
+function Column({ stageKey, label, outcome, deals, section, locked }: { stageKey: string; label: string; outcome: string; deals: BoardDeal[]; section: PipelineSection; locked: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column:${stageKey}` });
   return (
     <section
@@ -97,7 +98,7 @@ function Column({ stageKey, label, outcome, deals, section }: { stageKey: string
       </h3>
       <ul ref={setNodeRef} className="flex min-h-24 flex-1 flex-col gap-2">
         {deals.map((deal) => (
-          <DealCard key={deal.id} deal={deal} section={section} />
+          <DealCard key={deal.id} deal={deal} section={section} locked={locked} />
         ))}
         {deals.length === 0 ? <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">Drop here</li> : null}
       </ul>
@@ -105,7 +106,28 @@ function Column({ stageKey, label, outcome, deals, section }: { stageKey: string
   );
 }
 
-export function Board({ section, deals: initial }: { section: PipelineSection; deals: BoardDeal[] }) {
+// Arrow left/right jump to the neighbouring stage; up/down nudge within the column.
+const coordinateGetter: KeyboardCoordinateGetter = (event, { context: { droppableContainers, collisionRect } }) => {
+  if (!collisionRect) return undefined;
+  const { code } = event;
+  if (code === "ArrowDown" || code === "ArrowUp") {
+    event.preventDefault();
+    return { x: collisionRect.left, y: collisionRect.top + (code === "ArrowDown" ? 72 : -72) };
+  }
+  if (code !== "ArrowLeft" && code !== "ArrowRight") return undefined;
+  event.preventDefault();
+  const columns = droppableContainers
+    .getEnabled()
+    .filter((container) => String(container.id).startsWith("column:") && container.rect.current)
+    .map((container) => container.rect.current!)
+    .sort((a, b) => a.left - b.left);
+  const centre = collisionRect.left + collisionRect.width / 2;
+  const current = columns.findIndex((rect) => centre >= rect.left && centre <= rect.left + rect.width);
+  const next = columns[current === -1 ? 0 : current + (code === "ArrowRight" ? 1 : -1)];
+  return next ? { x: next.left + 12, y: next.top + 24 } : undefined;
+};
+
+export function Board({ section, deals: initial, locked = false }: { section: PipelineSection; deals: BoardDeal[]; locked?: boolean }) {
   const [deals, setDeals] = useState(initial);
   const [syncedFrom, setSyncedFrom] = useState(initial);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -119,7 +141,7 @@ export function Board({ section, deals: initial }: { section: PipelineSection; d
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter }),
   );
   const stages = PIPELINES[section].stages;
 
@@ -145,21 +167,37 @@ export function Board({ section, deals: initial }: { section: PipelineSection; d
       if (overCard === id) return;
     }
     const sortKey = dropSortKey(deals, id, stage, overCard);
-    const before = deals;
+    const previous = deals.find((d) => d.id === id);
+    if (!previous) return;
     setDeals(moveCard(deals, id, stage, sortKey));
     startTransition(async () => {
       const result = await moveDealAction(id, stage, sortKey);
       if (!result.ok) {
-        setDeals(before);
+        // Undo only this card, so a later move that succeeded is not rolled back with it.
+        setDeals((current) => moveCard(current, id, previous.stage, previous.sortKey));
         toast.error(result.message);
       }
     });
   }
 
   const active = deals.find((d) => d.id === activeId) ?? null;
+  const stageLabel = (id: string | number) => {
+    const key = String(id);
+    if (key.startsWith("column:")) return stages.find((st) => st.key === key.slice(7))?.label ?? "a stage";
+    const card = deals.find((d) => d.id === key.slice(5));
+    return card ? `before ${card.title}` : "a card";
+  };
+  const title = (id: string | number) => deals.find((d) => d.id === String(id))?.title ?? "card";
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${title(active.id)}.`,
+    onDragOver: ({ active, over }) => (over ? `${title(active.id)} is over ${stageLabel(over.id)}.` : undefined),
+    onDragEnd: ({ active, over }) => (over ? `${title(active.id)} was dropped on ${stageLabel(over.id)}.` : `${title(active.id)} was dropped.`),
+    onDragCancel: ({ active }) => `Moving ${title(active.id)} was cancelled.`,
+  };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
+    <DndContext id={`board-${section}`} accessibility={{ announcements, screenReaderInstructions: { draggable: "Press space to pick up this card. Left and right arrows change stage, up and down reorder, space drops it, escape cancels." } }} sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
+      {locked ? <p className="mb-3 text-sm text-muted-foreground">Clear the search or filter to rearrange cards.</p> : null}
       <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:mx-0 md:px-0">
         {stages.map((stage) => (
           <Column
@@ -168,6 +206,7 @@ export function Board({ section, deals: initial }: { section: PipelineSection; d
             label={stage.label}
             outcome={stage.outcome}
             section={section}
+            locked={locked}
             deals={deals.filter((d) => d.stage === stage.key).sort((a, b) => a.sortKey - b.sortKey)}
           />
         ))}

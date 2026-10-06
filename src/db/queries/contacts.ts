@@ -143,7 +143,22 @@ export async function getContactDeleteImpact(userId: string, id: string) {
     db
       .select({ n: count() })
       .from(tasks)
-      .where(and(eq(tasks.userId, userId), eq(tasks.contactId, id))),
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          or(
+            eq(tasks.contactId, id),
+            // Tasks on a deal that goes with this contact (an angel) stay but lose the link.
+            inArray(
+              tasks.dealId,
+              db
+                .select({ id: deals.id })
+                .from(deals)
+                .where(and(eq(deals.userId, userId), eq(deals.contactId, id), isNull(deals.companyId))),
+            ),
+          ),
+        ),
+      ),
   ]);
   return { activities: activityRow.n, deals: dealRow.n, detachedDeals: detachedRow.n, tasks: taskRow.n };
 }

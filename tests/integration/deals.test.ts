@@ -144,6 +144,41 @@ describe.skipIf(!hasDevDb)("deals data layer (runs against the Neon dev branch)"
     expect(row?.contactDetails).toEqual({ background: "Founder" });
   });
 
+  it("renumbers a column whose sort keys have collapsed together", async () => {
+    const a = await d.createRestaurantDeal(owner, restaurant("Crowd A"));
+    const b = await d.createRestaurantDeal(owner, restaurant("Crowd B"));
+    await d.moveDeal(owner, a.id, "contacted", 5);
+    await d.moveDeal(owner, b.id, "contacted", 5 + 1e-9);
+    const column = (await d.listDeals(owner, "restaurants")).filter((r) => r.stage === "contacted");
+    const keys = column.map((r) => r.sortKey);
+    expect(keys.every((k) => Number.isInteger(k))).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(column.map((r) => r.title)).toEqual(["Crowd A", "Crowd B"]);
+  });
+
+  it("refuses another user's deal for activities and tasks", async () => {
+    const a = await import("@/db/queries/activities");
+    const t = await import("@/db/queries/tasks");
+    const theirs = await d.createRestaurantDeal(other, restaurant("Theirs"));
+    await expect(a.logActivity(owner, { type: "note", summary: "x", dealId: theirs.id })).rejects.toThrow(a.ActivityTargetError);
+    await expect(t.createTask(owner, { title: "x", dueDate: null, contactId: null, dealId: theirs.id })).rejects.toThrow(t.TaskTargetError);
+  });
+
+  it("counts tasks on a deal in the delete impact, and they survive unlinked", async () => {
+    const t = await import("@/db/queries/tasks");
+    const deal = await d.createRestaurantDeal(owner, restaurant("Has Tasks"));
+    await t.createTask(owner, { title: "On deal", dueDate: null, contactId: null, dealId: deal.id });
+    const impact = await co.getCompanyDeleteImpact(owner, deal.companyId!);
+    expect(impact.tasks).toBe(1);
+    await co.deleteCompany(owner, deal.companyId!);
+    const open = await t.listOpenTasks(owner);
+    expect(open.some((x) => x.title === "On deal")).toBe(true);
+
+    const angel = await d.createInvestorDeal(owner, investor("Task Angel", "angel"));
+    await t.createTask(owner, { title: "On angel deal", dueDate: null, contactId: null, dealId: angel.id });
+    expect((await c.getContactDeleteImpact(owner, angel.contactId!)).tasks).toBe(1);
+  });
+
   describe("delete flows with deals", () => {
     it("removes an angel's deal when the angel is deleted", async () => {
       const angel = await d.createInvestorDeal(owner, investor("Gone Angel", "angel"));

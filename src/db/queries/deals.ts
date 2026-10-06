@@ -1,4 +1,5 @@
 import { and, asc, eq, ilike, max, or } from "drizzle-orm";
+import { needsRenumber } from "@/lib/board";
 import { db } from "@/db";
 import { companies, contacts, deals, type DealStatus } from "@/db/schema";
 import {
@@ -232,7 +233,24 @@ export async function moveDeal(userId: string, id: string, stageKey: string, sor
     })
     .where(and(eq(deals.userId, userId), eq(deals.id, id)))
     .returning();
+  if (updated && sortKey !== undefined) await renumberIfCrowded(userId, updated.section as PipelineSection, updated.stage);
   return updated ?? null;
+}
+
+// Repeated drops into one gap halve it until two keys collide; when that is close, renumber the
+// column 1..n in its current order so later drops keep working.
+async function renumberIfCrowded(userId: string, section: PipelineSection, stage: string) {
+  const column = await db
+    .select({ id: deals.id, sortKey: deals.sortKey })
+    .from(deals)
+    .where(and(eq(deals.userId, userId), eq(deals.section, section), eq(deals.stage, stage)))
+    .orderBy(asc(deals.sortKey), asc(deals.createdAt));
+  if (!needsRenumber(column.map((row) => row.sortKey))) return;
+  await db.transaction(async (tx) => {
+    for (const [index, row] of column.entries()) {
+      await tx.update(deals).set({ sortKey: index + 1 }).where(and(eq(deals.userId, userId), eq(deals.id, row.id)));
+    }
+  });
 }
 
 type Facts = { amount: number | null; nextStep: string | null; nextStepDate: string | null; stage: string };

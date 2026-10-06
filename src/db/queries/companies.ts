@@ -1,6 +1,6 @@
-import { and, count, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, companies, contacts, deals, type Section } from "@/db/schema";
+import { activities, companies, contacts, deals, tasks, type Section } from "@/db/schema";
 import type { CompanyInput } from "@/lib/validation/company";
 import { escapeLike } from "./util";
 
@@ -62,7 +62,7 @@ export async function setCompanyArchived(userId: string, id: string, archived: b
 
 /** What a hard delete would take with it, for the confirmation dialog. */
 export async function getCompanyDeleteImpact(userId: string, id: string) {
-  const [[activityRow], [dealRow], [contactRow]] = await Promise.all([
+  const [[activityRow], [dealRow], [contactRow], [taskRow]] = await Promise.all([
     db
       .select({ n: count() })
       .from(activities)
@@ -75,8 +75,21 @@ export async function getCompanyDeleteImpact(userId: string, id: string) {
       .select({ n: count() })
       .from(contacts)
       .where(and(eq(contacts.userId, userId), eq(contacts.companyId, id))),
+    // Tasks on the company or on any of its deals stay but lose the link.
+    db
+      .select({ n: count() })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          or(
+            eq(tasks.companyId, id),
+            inArray(tasks.dealId, db.select({ id: deals.id }).from(deals).where(and(eq(deals.userId, userId), eq(deals.companyId, id)))),
+          ),
+        ),
+      ),
   ]);
-  return { activities: activityRow.n, deals: dealRow.n, contacts: contactRow.n };
+  return { activities: activityRow.n, deals: dealRow.n, contacts: contactRow.n, tasks: taskRow.n };
 }
 
 // Deletes the company, all of its deals (an investor deal needs its institution) and its

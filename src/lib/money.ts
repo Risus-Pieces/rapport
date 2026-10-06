@@ -2,7 +2,7 @@
 export function parseDollars(input: string): number | null | "invalid" {
   const text = input.trim().replace(/^\$/, "").replace(/,/g, "");
   if (text === "") return null;
-  if (!/^\d+(\.\d{1,2})?$/.test(text)) return "invalid";
+  if (!/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(text)) return "invalid";
   const cents = Math.round(Number(text) * 100);
   return Number.isSafeInteger(cents) ? cents : "invalid";
 }

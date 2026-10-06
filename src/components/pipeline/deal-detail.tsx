@@ -57,7 +57,7 @@ export async function DealDetail({ section, id }: { section: PipelineSection; id
     listDoneTasks(userId, { dealId: deal.id, limit: 5 }),
     deal.companyId ? listCompanyContacts(userId, deal.companyId) : Promise.resolve([]),
     deal.companyId
-      ? getCompanyDeleteImpact(userId, deal.companyId).then((i) => ({ activities: i.activities, deals: i.deals, tasks: 0, contacts: i.contacts }))
+      ? getCompanyDeleteImpact(userId, deal.companyId).then((i) => ({ activities: i.activities, deals: i.deals, tasks: i.tasks, contacts: i.contacts }))
       : deal.contactId
         ? getContactDeleteImpact(userId, deal.contactId).then((i) => ({ ...i, contacts: 0 }))
         : Promise.resolve({ activities: 0, deals: 0, tasks: 0, contacts: 0 }),

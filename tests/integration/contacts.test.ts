@@ -209,7 +209,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
         dealId: deal.id,
       });
       const [task] = await db.insert(s.tasks).values({ userId: owner, title: "Call", companyId: company.id }).returning();
-      expect(await co.getCompanyDeleteImpact(owner, company.id)).toEqual({ activities: 1, deals: 1, contacts: 1 });
+      expect(await co.getCompanyDeleteImpact(owner, company.id)).toEqual({ activities: 1, deals: 1, contacts: 1, tasks: 1 });
 
       expect(await co.deleteCompany(owner, company.id)).toBe(true);
 
