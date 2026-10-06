@@ -50,7 +50,7 @@ export default async function TasksPage() {
       {done.length > 0 ? (
         <details className="mt-8">
           <summary className="min-h-11 cursor-pointer py-2.5 text-sm text-muted-foreground">
-            Recently completed ({done.length})
+            Recently completed
           </summary>
           <Card className="px-3 py-1">
             <TaskList tasks={done} today={today} showContact />

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CircleAlert, Circle, CircleCheck, Trash2 } from "lucide-react";
+import { CircleAlert, Circle, CircleCheck } from "lucide-react";
 import { deleteTaskAction, toggleTaskAction } from "@/app/actions/records";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { Button } from "@/components/ui/button";
 import type { TaskRow } from "@/db/queries/tasks";
 import { formatDay } from "@/lib/dates";
@@ -50,12 +51,13 @@ export function TaskList({ tasks, today, showContact = false }: TaskListProps) {
                 ) : null}
               </p>
             </div>
-            <form action={deleteTaskAction}>
-              <input type="hidden" name="id" value={task.id} />
-              <Button type="submit" variant="ghost" size="icon-lg" aria-label={`Delete ${task.title}`}>
-                <Trash2 aria-hidden />
-              </Button>
-            </form>
+            <ConfirmDelete
+              id={task.id}
+              action={deleteTaskAction}
+              label={`task ${task.title}`}
+              title="Delete this task?"
+              description="This cannot be undone."
+            />
           </li>
         );
       })}

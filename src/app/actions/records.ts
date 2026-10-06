@@ -20,9 +20,9 @@ export async function addActivityAction(prev: FormState, formData: FormData): Pr
   const session = await requireSession();
   const values = formToObject(formData);
   const contactId = uuid.safeParse(values.contactId);
-  if (!contactId.success) return { ...prev, errors: {}, message: "That contact could not be found." };
+  if (!contactId.success) return { ...prev, errors: {}, message: "That contact could not be found.", values };
   const parsed = activitySchema.safeParse(values);
-  if (!parsed.success) return { ...prev, errors: fieldErrors(parsed.error), message: null };
+  if (!parsed.success) return { ...prev, errors: fieldErrors(parsed.error), message: null, values };
   try {
     await logActivity(session.user.id, {
       contactId: contactId.data,
@@ -32,12 +32,12 @@ export async function addActivityAction(prev: FormState, formData: FormData): Pr
       occurredAt: resolveOccurredAt(parsed.data.day),
     });
   } catch (error) {
-    if (error instanceof ActivityTargetError) return { ...prev, errors: {}, message: error.message };
+    if (error instanceof ActivityTargetError) return { ...prev, errors: {}, message: error.message, values };
     console.error("addActivityAction failed:", error instanceof Error ? error.message : error);
-    return { ...prev, errors: {}, message: "Could not save. Try again." };
+    return { ...prev, errors: {}, message: "Could not save. Try again.", values };
   }
   refreshAll();
-  return { errors: {}, message: null, saved: prev.saved + 1 };
+  return { errors: {}, message: null, saved: prev.saved + 1, values: {} };
 }
 
 const QUICK_SUMMARY = { call: "Called", email: "Emailed", meeting: "Met" } as const;
@@ -73,17 +73,18 @@ export async function deleteActivityAction(formData: FormData) {
 
 export async function createTaskAction(prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireSession();
-  const parsed = taskSchema.safeParse(formToObject(formData));
-  if (!parsed.success) return { ...prev, errors: fieldErrors(parsed.error), message: null };
+  const values = formToObject(formData);
+  const parsed = taskSchema.safeParse(values);
+  if (!parsed.success) return { ...prev, errors: fieldErrors(parsed.error), message: null, values };
   try {
     await createTask(session.user.id, parsed.data);
   } catch (error) {
-    if (error instanceof TaskTargetError) return { ...prev, errors: {}, message: error.message };
+    if (error instanceof TaskTargetError) return { ...prev, errors: {}, message: error.message, values };
     console.error("createTaskAction failed:", error instanceof Error ? error.message : error);
-    return { ...prev, errors: {}, message: "Could not save. Try again." };
+    return { ...prev, errors: {}, message: "Could not save. Try again.", values };
   }
   refreshAll();
-  return { errors: {}, message: null, saved: prev.saved + 1 };
+  return { errors: {}, message: null, saved: prev.saved + 1, values: {} };
 }
 
 export async function toggleTaskAction(formData: FormData) {

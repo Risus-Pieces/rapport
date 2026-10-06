@@ -12,6 +12,7 @@ Reset script, Studio form controls, token test, priority meter, delete-flow test
 - **Companies UI (Phase 4).** Companies have a scoped data layer, validation and delete flow, but no screens; they arrive with the Restaurants and Investors Companies views.
 - **Section config and per-section `details` schemas** (`src/lib/sections.ts`) land with the first section that needs them (Phase 4).
 - **Contact actions assume the General section.** `saveContactAction` and friends live under `general/`; generalize them (section argument, shared form) when Restaurants and Investors get People views.
+- **Owner timezone (also tasks).** Task grouping, "Overdue" on tasks and the "Today" list use the UTC date, so from late afternoon in US time zones a task due today reads overdue and tomorrow's tasks read as today. The future-date check on activities also uses the UTC date.
 - **Owner timezone.** Reminder day counts use elapsed 24-hour periods and the contact page formats dates in UTC, so an evening touch can show tomorrow's date. Add an owner timezone setting (Settings, Phase 5) and use it for both.
 - **"Log a touch" is minimal.** The contact page logs a call, email or meeting with a fixed summary; Phase 3 replaces it with the real activity form and timeline.
 

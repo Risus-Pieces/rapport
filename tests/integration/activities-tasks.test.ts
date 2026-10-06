@@ -64,12 +64,42 @@ describe.skipIf(!hasDevDb)("activities and tasks data layer (runs against the Ne
       await expect(a.logActivity(owner, { type: "call", summary: "x", dealId: deal.id })).rejects.toThrow(/deal/);
     });
 
+    it("deleting an activity after its contact is gone is a harmless no-op", async () => {
+      const mine = await contact(owner);
+      const created = await a.logActivity(owner, { type: "call", summary: "Gone", contactId: mine.id });
+      await db.delete(s.contacts).where(eq(s.contacts.id, mine.id));
+      expect(await a.deleteActivity(owner, created.id)).toBeNull();
+    });
+
     it("deletes only the owner's own activity", async () => {
       const mine = await contact(owner);
       const created = await a.logActivity(owner, { type: "call", summary: "Mine", contactId: mine.id });
       expect(await a.deleteActivity(other, created.id)).toBeNull();
       expect((await a.deleteActivity(owner, created.id))?.id).toBe(created.id);
       expect(await a.listContactActivities(owner, mine.id)).toHaveLength(0);
+    });
+  });
+
+  describe("follow-ups", () => {
+    it("lists overdue and due-soon contacts across sections, skipping archived and reminder-less ones", async () => {
+      const c = await import("@/db/queries/contacts");
+      const old = new Date(Date.now() - 100 * 86_400_000);
+      const make = async (name: string, section: "general" | "investors", priority: "high" | null, archived = false) =>
+        (
+          await db
+            .insert(s.contacts)
+            .values({ userId: owner, section, name, priority, createdAt: old, archivedAt: archived ? new Date() : null })
+            .returning()
+        )[0];
+      const late = await make("FU Late", "general", "high");
+      const lateInvestor = await make("FU Investor", "investors", "high");
+      const none = await make("FU None", "general", null);
+      const archived = await make("FU Archived", "general", "high", true);
+      const ids = (await c.listFollowUps(owner)).map((x) => x.id);
+      expect(ids).toContain(late.id);
+      expect(ids).toContain(lateInvestor.id);
+      expect(ids).not.toContain(none.id);
+      expect(ids).not.toContain(archived.id);
     });
   });
 

@@ -12,7 +12,7 @@ const dayField = z
     z
       .string()
       .refine(isValidDateString, "Enter a valid date.")
-      .refine((value) => value <= todayString(new Date(Date.now() + 86_400_000)), "A past touch cannot be in the future.")
+      .refine((value) => value <= todayString(), "That date is in the future.")
       .nullable(),
   );
 

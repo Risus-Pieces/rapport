@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState } from "react";
 import { addActivityAction } from "@/app/actions/records";
 import { emptyFormState } from "@/lib/form-state";
 import { describedBy, FormField } from "@/components/form-field";
@@ -22,18 +22,14 @@ const TYPE_ITEMS = ACTIVITY_TYPES.map((value) => ({ value, label: TYPE_LABELS[va
 
 export function ActivityForm({ contactId }: { contactId: string }) {
   const [state, action, pending] = useActionState(addActivityAction, emptyFormState);
-  const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => {
-    if (state.saved > 0) formRef.current?.reset();
-  }, [state.saved]);
   const { errors } = state;
 
   return (
-    <form ref={formRef} action={action} className="space-y-4" noValidate>
+    <form key={state.saved} action={action} className="space-y-4" noValidate>
       <input type="hidden" name="contactId" value={contactId} />
       <div className="grid gap-4 sm:grid-cols-[10rem_1fr_11rem]">
         <FormField id="activity-type" label="Type" error={errors.type}>
-          <Select name="type" items={TYPE_ITEMS} defaultValue="call">
+          <Select name="type" items={TYPE_ITEMS} defaultValue={state.values.type ?? "call"}>
             <SelectTrigger id="activity-type">
               <SelectValue />
             </SelectTrigger>
@@ -52,6 +48,7 @@ export function ActivityForm({ contactId }: { contactId: string }) {
             name="summary"
             required
             autoComplete="off"
+            defaultValue={state.values.summary ?? ""}
             aria-invalid={errors.summary ? true : undefined}
             aria-describedby={describedBy("activity-summary", errors.summary)}
           />
@@ -61,13 +58,14 @@ export function ActivityForm({ contactId }: { contactId: string }) {
             id="activity-day"
             name="day"
             type="date"
+            defaultValue={state.values.day ?? ""}
             aria-invalid={errors.day ? true : undefined}
             aria-describedby={describedBy("activity-day", errors.day, "hint")}
           />
         </FormField>
       </div>
       <FormField id="activity-body" label="Notes" error={errors.body}>
-        <Textarea id="activity-body" name="body" className="min-h-16" />
+        <Textarea id="activity-body" name="body" className="min-h-16" defaultValue={state.values.body ?? ""} />
       </FormField>
       {state.message ? (
         <p role="alert" className="text-sm text-destructive">

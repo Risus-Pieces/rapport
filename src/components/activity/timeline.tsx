@@ -1,6 +1,5 @@
-import { Trash2 } from "lucide-react";
 import { deleteActivityAction } from "@/app/actions/records";
-import { Button } from "@/components/ui/button";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { formatDay } from "@/lib/dates";
 
 type TimelineItem = { id: string; type: string; summary: string; body: string | null; occurredAt: Date };
@@ -20,12 +19,13 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
               {formatDay(item.occurredAt)}
             </time>
           </div>
-          <form action={deleteActivityAction}>
-            <input type="hidden" name="id" value={item.id} />
-            <Button type="submit" variant="ghost" size="icon-lg" aria-label={`Delete ${item.type}: ${item.summary}`}>
-              <Trash2 aria-hidden />
-            </Button>
-          </form>
+          <ConfirmDelete
+            id={item.id}
+            action={deleteActivityAction}
+            label={`${item.type}: ${item.summary}`}
+            title="Delete this activity?"
+            description="This cannot be undone. It can change when you last touched this contact."
+          />
         </li>
       ))}
     </ul>
