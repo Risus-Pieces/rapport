@@ -8,11 +8,36 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export type SectionAccent = "restaurants" | "investors" | "general";
+
 export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  accent?: "restaurants" | "investors" | "general";
+  accent?: SectionAccent;
+};
+
+// Literal class strings on purpose: Tailwind only generates classes it can see
+// written out in full, so never build these with template interpolation.
+//   dot  = solid section color (nav dots, page header dot)
+//   chip = soft background with ink text (icon chips)
+//   text = section color as text/icon color
+export const SECTION_STYLES: Record<SectionAccent, { dot: string; chip: string; text: string }> = {
+  restaurants: {
+    dot: "bg-section-restaurants",
+    chip: "bg-section-restaurants-soft text-section-restaurants-ink",
+    text: "text-section-restaurants",
+  },
+  investors: {
+    dot: "bg-section-investors",
+    chip: "bg-section-investors-soft text-section-investors-ink",
+    text: "text-section-investors",
+  },
+  general: {
+    dot: "bg-section-general",
+    chip: "bg-section-general-soft text-section-general-ink",
+    text: "text-section-general",
+  },
 };
 
 export const PRIMARY_NAV: NavItem[] = [
