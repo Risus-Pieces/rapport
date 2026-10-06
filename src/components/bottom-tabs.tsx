@@ -23,7 +23,7 @@ export function BottomTabs() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors",
-                  active && cn("bg-accent", item.accent ? SECTION_STYLES[item.accent].text : "text-primary"),
+                  active && cn("bg-accent ring-2 ring-primary", item.accent ? SECTION_STYLES[item.accent].text : "text-primary"),
                 )}
               >
                 <Icon aria-hidden className="size-5" />
