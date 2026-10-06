@@ -38,6 +38,7 @@ describe("taskSchema", () => {
       title: "Send deck",
       dueDate: null,
       contactId: null,
+      dealId: null,
     });
   });
 
