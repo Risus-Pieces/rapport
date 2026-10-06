@@ -27,6 +27,7 @@ Public sign-up is closed; the seed script is the only way to create the owner.
 |---|---|
 | `npm run dev` | Start the dev server |
 | `npm test` | Unit tests, plus integration tests that write to the database in DATABASE_URL. They run only when the three env vars are set and `NEON_BRANCH=dev` confirms it is the Neon dev branch; they refuse to run otherwise. Never point `.env.local` at `main`. |
+| `npm run reset:owner-password` | Interactive. Sets a new owner password (also repairs a missing credential row) and signs out every session. |
 | `npm run typecheck` / `npm run lint` | Static checks |
 | `npm run db:generate` | Generate a migration after editing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations to the branch in `DATABASE_URL_UNPOOLED` |

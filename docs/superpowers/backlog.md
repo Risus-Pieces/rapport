@@ -2,14 +2,17 @@
 
 Decisions and deferred work carried over from Phase 1 (Foundation) and the Studio redesign. Each item says where it should land. Read this before writing the Phase 2 plan.
 
-## Phase 2 (contacts, companies, General) — do these first
+## Done in Phase 2
 
-1. **`scripts/reset-owner-password.ts`.** The spec promises a password-reset script and none exists; there is no change-password screen either. Implement it as an upsert of the owner's `credential` account row, so it also repairs a user left without a credential by the non-atomic `createOwner`. Do this before any real data is entered.
-2. **Studio form controls.** Restyle the components the redesign left alone, following `## Studio design rules` in the spec: `textarea.tsx` and `select.tsx` (stale `bg-input` fills, `h-8`, `rounded-lg`, translucent ring), `dialog.tsx` (`rounded-xl`, close button below 44px), `dropdown-menu.tsx` (`shadow-md`; `focus:bg-accent` is only 1.23:1, so add an inset ring or outline), and the Sonner default shadow. Controls should be `h-11 rounded-xl border-input bg-secondary text-base` with the opaque 2px ring.
-3. **Token test.** Add a test that reads `src/app/globals.css` and asserts every `--color-section-*` mapping and its value in both themes exists. It replaces the weak "maps each style" assertion in `src/lib/nav.test.ts`.
-4. **Priority meter.** Four steps, on-steps `bg-primary`, off-steps `bg-accent`, always with a text label. Priority never uses color hues (color belongs to sections).
-5. **Delete-flow tests, written with the delete flows themselves.** A contact or company that still has deals is refused; deleting a deal clears `activities.deal_id` and keeps the activity; `contacts.company_id` and `tasks.*` become null; deleting a company cascades its activities. (Deal-specific cases land in Phase 4.)
-6. **Card focus rings.** `Card` has `overflow-hidden`; full-bleed list rows inside a card need padding or an `overflow-visible` card so focus rings are not clipped.
+Reset script, Studio form controls, token test, priority meter, delete-flow tests (contact and company; deal cases below) and card focus rings are done.
+
+## Carried into Phase 3 and 4
+
+- **Deal delete-flow tests (Phase 4).** Add tests with the deal UI: a deal delete clears `activities.deal_id` (schema-level case already tested); contact delete detaches a company deal and removes an angel deal; company delete removes all its deals (tested at the data layer).
+- **Companies UI (Phase 4).** Companies have a scoped data layer, validation and delete flow, but no screens; they arrive with the Restaurants and Investors Companies views.
+- **Section config and per-section `details` schemas** (`src/lib/sections.ts`) land with the first section that needs them (Phase 4).
+- **Contact actions assume the General section.** `saveContactAction` and friends live under `general/`; generalize them (section argument, shared form) when Restaurants and Investors get People views.
+- **"Log a touch" is minimal.** The contact page logs a call, email or meeting with a fixed summary; Phase 3 replaces it with the real activity form and timeline.
 
 ## Phase 3 (activities, tasks, side panel)
 
