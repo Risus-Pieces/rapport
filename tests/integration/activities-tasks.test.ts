@@ -104,7 +104,7 @@ describe.skipIf(!hasDevDb)("activities and tasks data layer (runs against the Ne
   });
 
   describe("tasks", () => {
-    const input = (title: string, extra: Record<string, unknown> = {}) => ({ title, dueDate: null, contactId: null, ...extra });
+    const input = (title: string, extra: Record<string, unknown> = {}) => ({ title, dueDate: null, contactId: null, dealId: null, ...extra });
 
     it("creates, completes, reopens and deletes a task", async () => {
       const created = await t.createTask(owner, input("Send deck", { dueDate: "2026-10-12" }));

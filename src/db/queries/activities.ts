@@ -79,3 +79,12 @@ export async function deleteActivity(userId: string, id: string) {
     .returning({ id: activities.id, contactId: activities.contactId });
   return deleted ?? null;
 }
+
+export async function listDealActivities(userId: string, dealId: string, limit = 50) {
+  return db
+    .select()
+    .from(activities)
+    .where(and(eq(activities.userId, userId), eq(activities.dealId, dealId)))
+    .orderBy(desc(activities.occurredAt), desc(activities.createdAt))
+    .limit(limit);
+}
