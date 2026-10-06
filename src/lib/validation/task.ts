@@ -17,6 +17,7 @@ export const taskSchema = z.object({
     .transform((value) => (value === "" ? null : value))
     .pipe(z.string().refine(isValidDateString, "Enter a valid date.").nullable()),
   contactId: optionalId,
+  dealId: optionalId,
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;

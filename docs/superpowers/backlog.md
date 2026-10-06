@@ -20,7 +20,19 @@ Reset script, Studio form controls, token test, priority meter, delete-flow test
 
 Activities (full form, quick-log buttons, timeline with delete), tasks (page, per-contact tasks, complete/reopen/delete, grouped by due date) and a data-driven Home "Today" card are done.
 
-## Carried into Phase 4
+## Done in Phase 4
+
+Restaurants and Investors sections: pipeline board (drag between stages, optimistic with rollback), list, people and companies views, add/edit forms, deal pages (next step, tasks, activity log, timeline, people), the angel/institution rule with a stored type and All / Angels / Institutions filter, and delete flows (the delete button removes the restaurant or investor with its deals; see the confirmation text).
+
+## Carried into Phase 5
+
+- **Side panel still not built.** Deals and contacts open on their own pages (linkable, back button works). Decide whether a panel over the board is worth it after using the app.
+- **Keyboard moves on the board** rely on dnd-kit's keyboard sensor; the Stage select on the edit page is the reliable non-pointer path. Test with a screen reader.
+- **People and Companies views are read-only lists.** Add people from a deal's page; there is no standalone person form for Restaurants or Investors, and no way to move a contact between companies.
+- **Investor type cannot be changed after creation** (it would break the party rule). To fix a mistake, delete and re-add.
+- **Deal activities do not feed follow-up reminders** for the linked contact (reminders count activities logged on the contact itself).
+
+## Carried from Phase 3
 
 - **Side panel.** The spec's `?open=<kind>:<id>` panel is deferred: contacts keep dedicated routes. Build the panel with the deals board, where context switching matters, and decide then whether contact pages move into it.
 - **Task creation on the Tasks page** cannot pick a contact; attach tasks from a contact page. Add a contact picker with the ⌘K palette work.

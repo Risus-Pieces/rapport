@@ -19,13 +19,17 @@ function refreshAll() {
 export async function addActivityAction(prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireSession();
   const values = formToObject(formData);
-  const contactId = uuid.safeParse(values.contactId);
-  if (!contactId.success) return { ...prev, errors: {}, message: "That contact could not be found.", values };
+  const contactId = values.contactId ? uuid.safeParse(values.contactId) : null;
+  const dealId = values.dealId ? uuid.safeParse(values.dealId) : null;
+  if ((contactId && !contactId.success) || (dealId && !dealId.success) || (!contactId && !dealId)) {
+    return { ...prev, errors: {}, message: "That record could not be found.", values };
+  }
   const parsed = activitySchema.safeParse(values);
   if (!parsed.success) return { ...prev, errors: fieldErrors(parsed.error), message: null, values };
   try {
     await logActivity(session.user.id, {
-      contactId: contactId.data,
+      contactId: contactId?.success ? contactId.data : null,
+      dealId: dealId?.success ? dealId.data : null,
       type: parsed.data.type,
       summary: parsed.data.summary,
       body: parsed.data.body,

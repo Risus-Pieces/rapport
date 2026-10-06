@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { createTaskAction } from "@/app/actions/records";
 import { emptyFormState } from "@/lib/form-state";
 
-export function TaskForm({ contactId }: { contactId?: string }) {
+export function TaskForm({ contactId, dealId }: { contactId?: string; dealId?: string }) {
   const [state, action, pending] = useActionState(createTaskAction, emptyFormState);
-  const suffix = contactId ?? "all";
+  const suffix = dealId ?? contactId ?? "all";
   const titleError = state.errors.title ?? state.message ?? undefined;
   const dueError = state.errors.dueDate;
 
@@ -18,6 +18,7 @@ export function TaskForm({ contactId }: { contactId?: string }) {
   return (
     <form key={state.saved} action={action} className="space-y-2" noValidate>
       {contactId ? <input type="hidden" name="contactId" value={contactId} /> : null}
+      {dealId ? <input type="hidden" name="dealId" value={dealId} /> : null}
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-48 flex-1 space-y-2">
           <Label htmlFor={`task-title-${suffix}`}>New task</Label>

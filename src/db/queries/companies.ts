@@ -104,3 +104,11 @@ export async function listCompanyOptions(userId: string, section: Section) {
     .where(and(eq(companies.userId, userId), eq(companies.section, section), isNull(companies.archivedAt)))
     .orderBy(companies.name);
 }
+
+export async function listCompanyContacts(userId: string, companyId: string) {
+  return db
+    .select({ id: contacts.id, name: contacts.name, title: contacts.title, email: contacts.email })
+    .from(contacts)
+    .where(and(eq(contacts.userId, userId), eq(contacts.companyId, companyId), isNull(contacts.archivedAt)))
+    .orderBy(contacts.name);
+}

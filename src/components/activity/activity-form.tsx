@@ -20,13 +20,14 @@ const TYPE_LABELS: Record<(typeof ACTIVITY_TYPES)[number], string> = {
 };
 const TYPE_ITEMS = ACTIVITY_TYPES.map((value) => ({ value, label: TYPE_LABELS[value] }));
 
-export function ActivityForm({ contactId }: { contactId: string }) {
+export function ActivityForm({ contactId, dealId }: { contactId?: string; dealId?: string }) {
   const [state, action, pending] = useActionState(addActivityAction, emptyFormState);
   const { errors } = state;
 
   return (
     <form key={state.saved} action={action} className="space-y-4" noValidate>
-      <input type="hidden" name="contactId" value={contactId} />
+      {contactId ? <input type="hidden" name="contactId" value={contactId} /> : null}
+      {dealId ? <input type="hidden" name="dealId" value={dealId} /> : null}
       <div className="grid gap-4 sm:grid-cols-[10rem_1fr_11rem]">
         <FormField id="activity-type" label="Type" error={errors.type}>
           <Select name="type" items={TYPE_ITEMS} defaultValue={state.values.type ?? "call"}>
