@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PaletteTrigger } from "@/components/command-palette";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
@@ -44,6 +45,9 @@ export function Sidebar({ name, email }: { name?: string | null; email: string }
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card md:flex">
       <div className="px-6 pb-4 pt-7">
         <Wordmark />
+      </div>
+      <div className="px-3 pb-2">
+        <PaletteTrigger />
       </div>
       <nav aria-label="Main" className="flex-1 space-y-1 px-3 py-2">
         {PRIMARY_NAV.map((item) => (
