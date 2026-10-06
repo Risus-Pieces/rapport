@@ -150,6 +150,29 @@ Libraries: `@dnd-kit` for the kanban, shadcn `command` (cmdk) for ⌘K.
 Reads are server components; writes are server actions with zod validation.
 Drag-and-drop updates optimistically and rolls back on failure.
 
+## Studio design rules
+
+Rules for the Studio look (dark default, light alternative) that every later
+screen follows:
+
+1. Accent fill is never the sole state cue. Active, selected and focused
+   states also need a shape cue (bar, ring or outline) at >= 3:1 contrast.
+2. Weights are 400 and 500 only (`font-synthesis-weight: none` renders heavier
+   weights as 500).
+3. Touch sizing: phone primary actions use `size="lg"` or `icon-lg` (44px);
+   `default` is 40px; `xs`, `sm`, `icon-xs` and `icon-sm` are desktop-only.
+4. Section color comes only through `SECTION_STYLES` in `src/lib/nav.ts`.
+   Extend the map and its literal-class test; never interpolate class names.
+5. The priority meter uses `bg-primary` for on-steps and `bg-accent` for
+   off-steps, and is always paired with a text label.
+6. Form controls are `h-11 rounded-xl border-input bg-secondary text-base`
+   with the opaque 2px ring and offset. Textarea and Select get this in
+   Phase 2's first task.
+7. `Card` has `overflow-hidden`: full-bleed list rows inside a card need
+   padding, or an `overflow-visible` card, so focus rings are not clipped.
+8. Hover is `hover:bg-accent` or `hover:border-input`, never a fill closer
+   than 1.5:1 to its surface.
+
 ## Auth
 
 - Better Auth with the Drizzle adapter, email and password, one owner account
@@ -225,5 +248,5 @@ editable stage lists, per-field audit history.
   (the folder this session started in). A fuller older copy of the app is at
   `/Users/risus_zhao/Desktop/Apps/Connection/personal-crm` (it has the old
   design tokens, a `.vercel` link, and git history). It is used as a reference
-  for the theme and priority colors only; confirm this is the folder to build
-  in before implementation starts.
+  for the data model only; the Studio redesign replaced its theme. Confirm this
+  is the folder to build in before implementation starts.
