@@ -2,6 +2,9 @@ import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
 import { ReminderBadge } from "@/components/reminder-badge";
 import { TaskList } from "@/components/tasks/task-list";
+import { PipelineSnapshot } from "@/components/pipeline-snapshot";
+import { pipelineSnapshot, recentActivities } from "@/db/queries/dashboard";
+import { formatDay } from "@/lib/dates";
 import { listFollowUps } from "@/db/queries/contacts";
 import { listOpenTasks } from "@/db/queries/tasks";
 import { todayString } from "@/lib/dates";
@@ -27,9 +30,12 @@ const SECTION_TILES = PRIMARY_NAV.flatMap((item) => (item.accent ? [{ ...item, a
 export default async function HomePage() {
   const session = await requireSession();
   const today = todayString();
-  const [openTasks, followUps] = await Promise.all([
+  const [openTasks, followUps, restaurants, investors, recent] = await Promise.all([
     listOpenTasks(session.user.id),
     listFollowUps(session.user.id),
+    pipelineSnapshot(session.user.id, "restaurants"),
+    pipelineSnapshot(session.user.id, "investors"),
+    recentActivities(session.user.id),
   ]);
   const groups = groupOpenTasks(openTasks, today);
   const dueTasks = [...groups.overdue, ...groups.today];
@@ -92,6 +98,51 @@ export default async function HomePage() {
             </section>
           ) : null}
         </Card>
+        <section aria-labelledby="pipelines-heading">
+          <h2 id="pipelines-heading" className="mb-3 text-base font-medium">
+            Pipelines
+          </h2>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <PipelineSnapshot snapshot={restaurants} />
+            <PipelineSnapshot snapshot={investors} />
+          </div>
+        </section>
+        {recent.length > 0 ? (
+          <Card className="gap-2 p-5">
+            <h2 className="text-base font-medium">Recent activity</h2>
+            <ul className="divide-y divide-border">
+              {recent.map((item) => {
+                const who = item.contactName ?? item.companyName ?? "Unknown";
+                const href = item.dealId && item.dealSection ? `/${item.dealSection}/${item.dealId}` : item.contactSection === "general" && item.contactId ? `/general/${item.contactId}` : null;
+                const body = (
+                  <>
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        <span className="font-medium capitalize">{item.type}</span>
+                        <span className="text-muted-foreground"> · {item.summary}</span>
+                      </span>
+                      <span className="block truncate text-sm text-muted-foreground">{who}</span>
+                    </span>
+                    <time dateTime={item.occurredAt.toISOString()} className="shrink-0 text-sm text-muted-foreground">
+                      {formatDay(item.occurredAt)}
+                    </time>
+                  </>
+                );
+                return (
+                  <li key={item.id}>
+                    {href ? (
+                      <Link href={href} className="flex min-h-14 items-center justify-between gap-4 rounded-xl px-1 py-2 transition-colors hover:bg-accent">
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="flex min-h-14 items-center justify-between gap-4 px-1 py-2">{body}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        ) : null}
         <section aria-labelledby="sections-heading">
           <h2 id="sections-heading" className="sr-only">
             Sections
