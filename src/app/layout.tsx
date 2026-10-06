@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${plusJakarta.variable} ${geistMono.variable} h-full`}>
+      {/* Browser extensions (for example Grammarly) inject attributes into <body>, so React would otherwise log a hydration mismatch. */}
       <body suppressHydrationWarning className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           {children}

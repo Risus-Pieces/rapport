@@ -16,7 +16,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar name={session.user.name} email={session.user.email} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader />
-        <main id="main" className="flex-1 px-4 pb-28 pt-6 md:px-10 md:pb-10 md:pt-10">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="flex-1 scroll-mt-14 px-4 pb-28 pt-6 focus:outline-none md:scroll-mt-0 md:px-10 md:pb-10 md:pt-10"
+        >
           {children}
         </main>
       </div>

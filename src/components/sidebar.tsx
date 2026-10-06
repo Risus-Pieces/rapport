@@ -41,7 +41,7 @@ export function Sidebar({ name, email }: { name?: string | null; email: string }
   const pathname = usePathname();
   const displayName = name?.trim() || email;
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card md:flex">
       <div className="px-6 pb-4 pt-7">
         <Wordmark />
       </div>
@@ -50,7 +50,7 @@ export function Sidebar({ name, email }: { name?: string | null; email: string }
           <SidebarLink key={item.href} item={item} pathname={pathname} />
         ))}
       </nav>
-      <div className="space-y-2 border-t border-border p-3">
+      <div className="shrink-0 space-y-2 border-t border-border p-3">
         {SECONDARY_NAV.map((item) => (
           <SidebarLink key={item.href} item={item} pathname={pathname} />
         ))}

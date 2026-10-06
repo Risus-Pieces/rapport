@@ -52,6 +52,7 @@
 
 /* Light theme: the "Studio" alternative */
 :root {
+  color-scheme: light;
   --radius: 1rem;
   --background: #f5f4fb;
   --foreground: #1e1b3a;
@@ -85,6 +86,7 @@
 
 /* Dark theme (default): the "Studio" look */
 .dark {
+  color-scheme: dark;
   --background: #0e0d17;
   --foreground: #ecebfa;
   --card: #161525;

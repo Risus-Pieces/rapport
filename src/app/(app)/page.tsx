@@ -47,7 +47,7 @@ export default async function HomePage() {
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-secondary lg:flex-col lg:items-start"
+                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-input lg:flex-col lg:items-start"
               >
                 <span
                   aria-hidden
