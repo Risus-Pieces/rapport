@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, max, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNotNull, isNull, max, or } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals, tasks, type ActivityType, type Section } from "@/db/schema";
 import { getReminder, TOUCH_TYPES, compareReminders } from "@/lib/reminders";
@@ -24,7 +24,7 @@ export type ContactListItem = ReturnType<typeof withReminder<ContactRow>>;
 
 export async function listContacts(
   userId: string,
-  section: Section,
+  section: Section | null,
   options: { archived?: boolean; q?: string; now?: Date } = {},
 ): Promise<ContactListItem[]> {
   const q = options.q?.trim();
@@ -43,7 +43,7 @@ export async function listContacts(
     .where(
       and(
         eq(contacts.userId, userId),
-        eq(contacts.section, section),
+        section ? eq(contacts.section, section) : undefined,
         options.archived ? isNotNull(contacts.archivedAt) : isNull(contacts.archivedAt),
         q
           ? or(
@@ -75,15 +75,6 @@ export async function getContact(userId: string, id: string, now = new Date()) {
       and(eq(activities.userId, userId), eq(activities.contactId, id), inArray(activities.type, touchTypes)),
     );
   return withReminder({ ...row.contact, companyName: row.companyName, lastTouchAt: touch?.at ?? null }, now);
-}
-
-export async function listRecentActivities(userId: string, contactId: string, limit = 10) {
-  return db
-    .select()
-    .from(activities)
-    .where(and(eq(activities.userId, userId), eq(activities.contactId, contactId)))
-    .orderBy(desc(activities.occurredAt), desc(activities.createdAt))
-    .limit(limit);
 }
 
 export class InvalidCompanyError extends Error {
@@ -177,19 +168,8 @@ export async function deleteContact(userId: string, section: Section, id: string
   });
 }
 
-export async function logTouch(
-  userId: string,
-  contactId: string,
-  input: { type: ActivityType; summary: string; occurredAt?: Date },
-) {
-  const [contact] = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(and(eq(contacts.userId, userId), eq(contacts.id, contactId)));
-  if (!contact) return null;
-  const [created] = await db
-    .insert(activities)
-    .values({ userId, contactId, ...input })
-    .returning();
-  return created;
+/** Contacts that need a follow-up now (overdue or due soon) in every section, most overdue first. */
+export async function listFollowUps(userId: string, now = new Date()) {
+  const all = await listContacts(userId, null, { now });
+  return all.filter((c) => c.reminder.status === "overdue" || c.reminder.status === "due_soon");
 }

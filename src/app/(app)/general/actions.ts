@@ -2,12 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import {
   createContact,
   deleteContact,
   InvalidCompanyError,
-  logTouch,
   setContactArchived,
   updateContact,
 } from "@/db/queries/contacts";
@@ -72,26 +70,4 @@ export async function deleteContactAction(formData: FormData) {
   await deleteContact(session.user.id, SECTION, id.data);
   refresh();
   redirect("/general");
-}
-
-const touchSchema = z.object({
-  id: uuid,
-  type: z.enum(["call", "email", "meeting", "tasting"]),
-});
-
-const TOUCH_SUMMARY = { call: "Called", email: "Emailed", meeting: "Met", tasting: "Tasting" } as const;
-
-export type TouchState = { message: string | null };
-
-export async function logTouchAction(_prev: TouchState, formData: FormData): Promise<TouchState> {
-  const session = await requireSession();
-  const parsed = touchSchema.safeParse(formToObject(formData));
-  if (!parsed.success) return { message: "Could not log that. Try again." };
-  const created = await logTouch(session.user.id, parsed.data.id, {
-    type: parsed.data.type,
-    summary: TOUCH_SUMMARY[parsed.data.type],
-  });
-  if (!created) return { message: "That contact no longer exists." };
-  refresh(parsed.data.id);
-  return { message: `Logged: ${TOUCH_SUMMARY[parsed.data.type].toLowerCase()} today.` };
 }

@@ -8,10 +8,12 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
   type Schema = typeof import("@/db/schema");
   type C = typeof import("@/db/queries/contacts");
   type Co = typeof import("@/db/queries/companies");
+  type A = typeof import("@/db/queries/activities");
   let db: Db;
   let s: Schema;
   let c: C;
   let co: Co;
+  let a: A;
   const owner = randomUUID();
   const other = randomUUID();
   const input = (name: string, extra: Record<string, unknown> = {}) => ({
@@ -33,6 +35,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
     s = await import("@/db/schema");
     c = await import("@/db/queries/contacts");
     co = await import("@/db/queries/companies");
+    a = await import("@/db/queries/activities");
     for (const id of [owner, other]) {
       await db.insert(s.user).values({ id, name: "T", email: `contacts-${id}@example.test`, emailVerified: true });
     }
@@ -45,12 +48,12 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
   it("computes overdue status from calls, emails, meetings and tastings but not notes", async () => {
     const stale = await c.createContact(owner, "general", input("Stale Friend", { priority: "high" }));
     await db.update(s.contacts).set({ createdAt: days(100) }).where(eq(s.contacts.id, stale.id));
-    await c.logTouch(owner, stale.id, { type: "note", summary: "Thought of them", occurredAt: days(1) });
+    await a.logActivity(owner, { contactId: stale.id, type: "note", summary: "Thought of them", occurredAt: days(1) });
     let [row] = (await c.listContacts(owner, "general")).filter((x) => x.id === stale.id);
     expect(row.lastTouchAt).toBeNull();
     expect(row.reminder.status).toBe("overdue");
 
-    await c.logTouch(owner, stale.id, { type: "call", summary: "Caught up", occurredAt: days(2) });
+    await a.logActivity(owner, { contactId: stale.id, type: "call", summary: "Caught up", occurredAt: days(2) });
     [row] = (await c.listContacts(owner, "general")).filter((x) => x.id === stale.id);
     expect(row.lastTouchAt?.getTime()).toBeGreaterThan(days(3).getTime());
     expect(row.reminder.status).toBe("on_track");
@@ -71,7 +74,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
     expect(await c.updateContact(other, "general", mine.id, input("Hijacked"))).toBeNull();
     expect(await c.setContactArchived(other, "general", mine.id, true)).toBe(false);
     expect(await c.deleteContact(other, "general", mine.id)).toBe(false);
-    expect(await c.logTouch(other, mine.id, { type: "call", summary: "x" })).toBeNull();
+    await expect(a.logActivity(other, { contactId: mine.id, type: "call", summary: "x" })).rejects.toThrow(a.ActivityTargetError);
     expect((await c.listContacts(other, "general")).some((x) => x.id === mine.id)).toBe(false);
     expect((await c.getContact(owner, mine.id))?.name).toBe("Private Pat");
 
@@ -101,9 +104,9 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
   it("lists the newest activities first and caps the list", async () => {
     const person = await c.createContact(owner, "general", input("Chatty"));
     for (let i = 0; i < 12; i++) {
-      await c.logTouch(owner, person.id, { type: "call", summary: `call ${i}`, occurredAt: days(30 - i) });
+      await a.logActivity(owner, { contactId: person.id, type: "call", summary: `call ${i}`, occurredAt: days(30 - i) });
     }
-    const recent = await c.listRecentActivities(owner, person.id, 10);
+    const recent = await a.listContactActivities(owner, person.id, 10);
     expect(recent).toHaveLength(10);
     expect(recent[0].summary).toBe("call 11");
     expect(recent[9].summary).toBe("call 2");
@@ -149,7 +152,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
   describe("delete flows", () => {
     it("deleting a contact removes its activities, nulls its tasks and removes sole-party deals", async () => {
       const contact = await c.createContact(owner, "investors", input("Ada Angel"));
-      await c.logTouch(owner, contact.id, { type: "call", summary: "Intro" });
+      await a.logActivity(owner, { contactId: contact.id, type: "call", summary: "Intro" });
       const [task] = await db.insert(s.tasks).values({ userId: owner, title: "Send deck", contactId: contact.id }).returning();
       const [deal] = await db
         .insert(s.deals)
