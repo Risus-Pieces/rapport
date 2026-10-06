@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PaletteTrigger } from "@/components/command-palette";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
@@ -10,6 +11,7 @@ export function MobileHeader() {
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur md:hidden">
       <Wordmark />
       <div className="flex items-center">
+        <PaletteTrigger variant="icon" />
         {SECONDARY_NAV.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}

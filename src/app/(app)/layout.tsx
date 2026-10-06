@@ -1,4 +1,5 @@
 import { BottomTabs } from "@/components/bottom-tabs";
+import { CommandPalette } from "@/components/command-palette";
 import { MobileHeader } from "@/components/mobile-header";
 import { Sidebar } from "@/components/sidebar";
 import { requireSession } from "@/lib/session";
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <BottomTabs />
+      <CommandPalette />
     </div>
   );
 }

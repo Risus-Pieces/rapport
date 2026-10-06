@@ -188,3 +188,23 @@ export async function listFollowUps(userId: string, now = new Date()) {
   const all = await listContacts(userId, null, { now });
   return all.filter((c) => c.reminder.status === "overdue" || c.reminder.status === "due_soon");
 }
+
+/** Dedupe keys (section plus email, or name when there is no email) of every contact the owner has. */
+export async function listContactKeys(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ section: contacts.section, name: contacts.name, email: contacts.email })
+    .from(contacts)
+    .where(eq(contacts.userId, userId));
+  return new Set(rows.map((r) => `${r.section}|${(r.email?.trim() || r.name.trim()).toLowerCase()}`));
+}
+
+/** Inserts imported contacts in one transaction: all of them or none. */
+export async function importContacts(userId: string, items: { section: Section; input: ContactInput }[]) {
+  if (items.length === 0) return 0;
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < items.length; i += 500) {
+      await tx.insert(contacts).values(items.slice(i, i + 500).map(({ section, input }) => ({ userId, section, ...input, companyId: null })));
+    }
+  });
+  return items.length;
+}

@@ -32,6 +32,18 @@ Public sign-up is closed; the seed script is the only way to create the owner.
 | `npm run db:generate` | Generate a migration after editing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations to the branch in `DATABASE_URL_UNPOOLED` |
 
+## Deploying (Vercel)
+
+These steps are for you to run; they need your Vercel and Neon accounts.
+
+1. **Database.** Create the production data in the Neon `main` branch. Apply migrations to it with the direct connection string: `DATABASE_URL_UNPOOLED=<main direct string> npm run db:migrate`. Shell variables win over `.env.local`, so this does not touch the `dev` branch.
+2. **Owner account.** `DATABASE_URL=<main pooled string> npm run seed:owner` creates the single owner on `main` the same way.
+3. **Environment variables.** Set `DATABASE_URL` (pooled), `BETTER_AUTH_SECRET` (a new secret, not the dev one) and `BETTER_AUTH_URL` (the production origin, for example `https://rapport.example.com`) in **both** the Production and Preview scopes, because the build parses them at import. Do **not** set `NEON_BRANCH` in Vercel: it is only a local label for the integration tests. Preview deployments trust their own `VERCEL_URL` and `VERCEL_BRANCH_URL` automatically.
+4. **Connecting the Neon store to the Vercel project** makes `vercel env pull` overwrite `.env.local` with the `main` branch URLs. Point `.env.local` back at the `dev` branch and re-add `NEON_BRANCH=dev`, or the integration tests will refuse to run.
+5. **Sign-in rate limiting** is stored in the database (`rate_limit` table) so it holds across serverless instances; it is active in production only.
+6. **Backups.** Open Settings and export the CSV files now and then. The free Neon restore window is short.
+7. **Hobby plan.** Vercel Hobby is for non-commercial personal use; see the risks in the design doc.
+
 ## Design
 
 See `docs/superpowers/specs/2026-10-02-crm-overhaul-design.md`. Build plans live in `docs/superpowers/plans/`.

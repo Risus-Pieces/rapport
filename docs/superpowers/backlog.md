@@ -39,18 +39,19 @@ Restaurants and Investors sections: pipeline board (drag between stages, optimis
 - **Task and activity edit** (rename, change due date, edit summary) is not built; delete and re-add for now.
 - Activities and tasks for companies and deals arrive with their screens; the data layer already accepts them.
 
-## Phase 5 (Home, ⌘K, CSV, deploy) — deploy hardening
+## Done in Phase 5
 
-- Anchor the proxy matcher exclusions in `src/proxy.ts` as `login(?:/|$)` and `api/auth(?:/|$)` (today they match by prefix, for example `/loginfoo`).
-- Rate limiting is production-only and in-memory per serverless instance. Switch to `rateLimit.storage: "database"`, generate its table with `npx auth generate`, and add a migration.
-- Trusted origins: only `BETTER_AUTH_URL` is trusted, so sign-in from a preview deployment fails the origin check. Set `BETTER_AUTH_URL` per Vercel environment or add a wildcard `trustedOrigins`.
-- Seeding production: `DATABASE_URL=<main pooled string> npm run seed:owner` works because shell variables win over `--env-file`. Document it; do not add a flag.
-- Vercel needs all four env vars in both Production and Preview scopes, because `src/lib/env.ts` parses at import and `next build` fails without them. **Do not** set `NEON_BRANCH` in Vercel: it is a local safety label for the integration tests.
-- When the Neon store is connected to the Vercel project, `vercel env pull` overwrites `.env.local` with the `main` branch URLs. Point `.env.local` back at the `dev` branch and re-add `NEON_BRANCH=dev`; the integration tests refuse to run otherwise.
-- Tune the `pg` pool for Vercel Fluid compute (`attachDatabasePool`, short idle timeouts) at deploy time.
-- Decide how CI treats skipped integration suites (they skip silently when no database is configured).
-- Add shadcn `sidebar` / `chart` tokens back only if the dashboard needs those components.
-- Cleanup: delete the unused `public/*.svg` files and add `"engines": { "node": ">=22" }`.
+Home pipeline snapshot and recent activity, ⌘K search and jump, CSV export for every table and contact import, Settings page, anchored proxy matcher, database-backed rate limiting (migration 0001), Vercel preview trusted origins, `engines`, unused svgs removed, deploy steps in the README.
+
+## Still open (owner or later)
+
+- **Deploy itself** (Vercel project, Neon main migration, env vars, domain) is owner-only; see the README.
+- Tune the `pg` pool for Vercel Fluid compute (`attachDatabasePool`, short idle timeouts) once deployed and measured.
+- Decide how CI treats skipped integration suites (there is no CI yet; they skip silently without a database).
+- Add shadcn `sidebar` / `chart` tokens back only if a later screen needs those components.
+- CSV import covers contacts only; companies and deals can be exported but not re-imported. Importing restaurants and investors needs a design (company matching, stage mapping, angel/institution type).
+- Owner timezone setting (see the timezone items above).
+- Standalone person form and moving a person between companies for Restaurants and Investors.
 
 ## Later polish
 
