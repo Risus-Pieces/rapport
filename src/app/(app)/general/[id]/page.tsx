@@ -6,13 +6,20 @@ import { PriorityMeter } from "@/components/priority-meter";
 import { ReminderBadge } from "@/components/reminder-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getContact, getContactDeleteImpact, listRecentActivities } from "@/db/queries/contacts";
+import { listContactActivities } from "@/db/queries/activities";
+import { getContact, getContactDeleteImpact } from "@/db/queries/contacts";
+import { listDoneTasks, listOpenTasks } from "@/db/queries/tasks";
+import { ActivityForm } from "@/components/activity/activity-form";
+import { QuickLog } from "@/components/activity/quick-log";
+import { Timeline } from "@/components/activity/timeline";
+import { TaskForm } from "@/components/tasks/task-form";
+import { TaskList } from "@/components/tasks/task-list";
+import { formatDay, todayString } from "@/lib/dates";
 import { describeLastTouch } from "@/lib/reminders";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 import { archiveContactAction } from "../actions";
 import { DeleteContactDialog } from "../_components/delete-contact-dialog";
-import { LogTouch } from "../_components/log-touch";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -20,8 +27,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const contact = id.success ? await getContact(session.user.id, id.data) : null;
   return { title: contact?.name ?? "Contact" };
 }
-
-const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -38,10 +43,13 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
   if (!id.success) notFound();
   const contact = await getContact(session.user.id, id.data);
   if (!contact || contact.section !== "general") notFound();
-  const [impact, recent] = await Promise.all([
+  const [impact, activities, openTasks, doneTasks] = await Promise.all([
     getContactDeleteImpact(session.user.id, contact.id),
-    listRecentActivities(session.user.id, contact.id),
+    listContactActivities(session.user.id, contact.id),
+    listOpenTasks(session.user.id, { contactId: contact.id }),
+    listDoneTasks(session.user.id, { contactId: contact.id, limit: 5 }),
   ]);
+  const today = todayString();
   const archived = contact.archivedAt !== null;
 
   return (
@@ -84,27 +92,37 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
                 {describeLastTouch(contact.reminder.daysSince, contact.lastTouchAt !== null)}
               </span>
             </div>
-            <LogTouch contactId={contact.id} />
+            <QuickLog contactId={contact.id} />
           </Card>
 
-          <Card className="gap-3 p-5">
-            <h2 className="font-medium">Recent activity</h2>
-            {recent.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing logged yet. Use the buttons above after you reach out.</p>
+          <Card className="gap-4 p-5">
+            <h2 className="font-medium">Tasks</h2>
+            <TaskForm contactId={contact.id} />
+            {openTasks.length === 0 && doneTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tasks for {contact.name} yet.</p>
+            ) : null}
+            {openTasks.length > 0 ? <TaskList tasks={openTasks} today={today} /> : null}
+            {doneTasks.length > 0 ? (
+              <details className="text-sm">
+                <summary className="min-h-11 cursor-pointer py-2.5 text-muted-foreground">
+                  Completed ({doneTasks.length})
+                </summary>
+                <TaskList tasks={doneTasks} today={today} />
+              </details>
+            ) : null}
+          </Card>
+
+          <Card className="gap-4 p-5">
+            <h2 className="font-medium">Log activity</h2>
+            <ActivityForm contactId={contact.id} />
+          </Card>
+
+          <Card className="gap-2 p-5">
+            <h2 className="font-medium">Timeline</h2>
+            {activities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing logged yet. Log a call, email or meeting above.</p>
             ) : (
-              <ul className="divide-y divide-border">
-                {recent.map((activity) => (
-                  <li key={activity.id} className="flex items-baseline justify-between gap-4 py-2.5 text-sm">
-                    <span>
-                      <span className="font-medium capitalize">{activity.type}</span>
-                      <span className="text-muted-foreground"> · {activity.summary}</span>
-                    </span>
-                    <time dateTime={activity.occurredAt.toISOString()} className="shrink-0 text-muted-foreground">
-                      {dateFormat.format(activity.occurredAt)}
-                    </time>
-                  </li>
-                ))}
-              </ul>
+              <Timeline items={activities} />
             )}
           </Card>
         </div>
@@ -140,7 +158,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
             ) : null}
             {contact.tags.length > 0 ? <Fact label="Tags">{contact.tags.join(", ")}</Fact> : null}
             {contact.notes ? <Fact label="Notes"><span className="whitespace-pre-wrap">{contact.notes}</span></Fact> : null}
-            <Fact label="Added">{dateFormat.format(contact.createdAt)}</Fact>
+            <Fact label="Added">{formatDay(contact.createdAt)}</Fact>
           </dl>
         </Card>
       </div>

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
+import { ReminderBadge } from "@/components/reminder-badge";
+import { TaskList } from "@/components/tasks/task-list";
+import { listFollowUps } from "@/db/queries/contacts";
+import { listOpenTasks } from "@/db/queries/tasks";
+import { todayString } from "@/lib/dates";
+import { groupOpenTasks } from "@/lib/tasks";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { firstName } from "@/lib/greeting";
@@ -20,23 +26,71 @@ const SECTION_TILES = PRIMARY_NAV.flatMap((item) => (item.accent ? [{ ...item, a
 
 export default async function HomePage() {
   const session = await requireSession();
+  const today = todayString();
+  const [openTasks, followUps] = await Promise.all([
+    listOpenTasks(session.user.id),
+    listFollowUps(session.user.id),
+  ]);
+  const groups = groupOpenTasks(openTasks, today);
+  const dueTasks = [...groups.overdue, ...groups.today];
+  const total = dueTasks.length + followUps.length;
+  const summary =
+    total === 0
+      ? "Nothing needs you today."
+      : `${total} ${total === 1 ? "thing needs" : "things need"} you today.`;
   return (
     <>
-      <PageHeader title={`Welcome back, ${firstName(session.user.name)}`} description="Nothing needs you yet." />
+      <PageHeader title={`Welcome back, ${firstName(session.user.name)}`} description={summary} />
       <div className="space-y-6">
-        <Card className="gap-3 p-5">
+        <Card className="gap-4 p-5">
           <h2 className="text-base font-medium">Today</h2>
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary"
-            >
-              <CalendarCheck className="size-5" />
-            </span>
-            <p className="text-sm text-muted-foreground">
-              Follow-ups and tasks will show up here once you add people.
-            </p>
-          </div>
+          {total === 0 ? (
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary"
+              >
+                <CalendarCheck className="size-5" />
+              </span>
+              <p className="text-sm text-muted-foreground">
+                You are all caught up. Follow-ups and tasks show up here when they are due.
+              </p>
+            </div>
+          ) : null}
+          {dueTasks.length > 0 ? (
+            <section aria-labelledby="home-tasks">
+              <h3 id="home-tasks" className="mb-1 text-sm font-medium text-muted-foreground">
+                Tasks due
+              </h3>
+              <TaskList tasks={dueTasks} today={today} showContact />
+            </section>
+          ) : null}
+          {followUps.length > 0 ? (
+            <section aria-labelledby="home-followups">
+              <h3 id="home-followups" className="mb-1 text-sm font-medium text-muted-foreground">
+                Follow up
+              </h3>
+              <ul className="divide-y divide-border">
+                {followUps.slice(0, 10).map((contact) => (
+                  <li key={contact.id}>
+                    <Link
+                      href={contact.section === "general" ? `/general/${contact.id}` : `/${contact.section}`}
+                      className="flex min-h-14 items-center justify-between gap-4 rounded-xl px-1 py-2 transition-colors hover:bg-accent"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{contact.name}</span>
+                        <span className="block truncate text-sm text-muted-foreground capitalize">{contact.section}</span>
+                      </span>
+                      <ReminderBadge reminder={contact.reminder} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {followUps.length > 10 ? (
+                <p className="pt-2 text-sm text-muted-foreground">And {followUps.length - 10} more.</p>
+              ) : null}
+            </section>
+          ) : null}
         </Card>
         <section aria-labelledby="sections-heading">
           <h2 id="sections-heading" className="sr-only">

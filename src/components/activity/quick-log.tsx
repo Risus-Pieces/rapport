@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { Mail, Phone, UsersRound } from "lucide-react";
+import { quickLogAction, type QuickState } from "@/app/actions/records";
 import { Button } from "@/components/ui/button";
-import { logTouchAction, type TouchState } from "../actions";
 
 const TOUCHES = [
   { type: "call", label: "Called", icon: Phone },
@@ -11,11 +11,12 @@ const TOUCHES = [
   { type: "meeting", label: "Met", icon: UsersRound },
 ] as const;
 
-export function LogTouch({ contactId }: { contactId: string }) {
-  const [state, action, pending] = useActionState<TouchState, FormData>(logTouchAction, { message: null });
+// One-tap logging for the most common touches; the full form is for everything else.
+export function QuickLog({ contactId }: { contactId: string }) {
+  const [state, action, pending] = useActionState<QuickState, FormData>(quickLogAction, { message: null });
   return (
     <form action={action} className="space-y-2">
-      <input type="hidden" name="id" value={contactId} />
+      <input type="hidden" name="contactId" value={contactId} />
       <div className="flex flex-wrap gap-2">
         {TOUCHES.map(({ type, label, icon: Icon }) => (
           <Button key={type} type="submit" name="type" value={type} variant="secondary" size="lg" disabled={pending}>

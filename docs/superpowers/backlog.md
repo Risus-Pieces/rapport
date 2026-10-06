@@ -12,12 +12,20 @@ Reset script, Studio form controls, token test, priority meter, delete-flow test
 - **Companies UI (Phase 4).** Companies have a scoped data layer, validation and delete flow, but no screens; they arrive with the Restaurants and Investors Companies views.
 - **Section config and per-section `details` schemas** (`src/lib/sections.ts`) land with the first section that needs them (Phase 4).
 - **Contact actions assume the General section.** `saveContactAction` and friends live under `general/`; generalize them (section argument, shared form) when Restaurants and Investors get People views.
+- **Owner timezone (also tasks).** Task grouping, "Overdue" on tasks and the "Today" list use the UTC date, so from late afternoon in US time zones a task due today reads overdue and tomorrow's tasks read as today. The future-date check on activities also uses the UTC date.
 - **Owner timezone.** Reminder day counts use elapsed 24-hour periods and the contact page formats dates in UTC, so an evening touch can show tomorrow's date. Add an owner timezone setting (Settings, Phase 5) and use it for both.
 - **"Log a touch" is minimal.** The contact page logs a call, email or meeting with a fixed summary; Phase 3 replaces it with the real activity form and timeline.
 
-## Phase 3 (activities, tasks, side panel)
+## Done in Phase 3
 
-- The Home line "Nothing needs you yet." is static text; make it data-driven once tasks exist.
+Activities (full form, quick-log buttons, timeline with delete), tasks (page, per-contact tasks, complete/reopen/delete, grouped by due date) and a data-driven Home "Today" card are done.
+
+## Carried into Phase 4
+
+- **Side panel.** The spec's `?open=<kind>:<id>` panel is deferred: contacts keep dedicated routes. Build the panel with the deals board, where context switching matters, and decide then whether contact pages move into it.
+- **Task creation on the Tasks page** cannot pick a contact; attach tasks from a contact page. Add a contact picker with the ⌘K palette work.
+- **Task and activity edit** (rename, change due date, edit summary) is not built; delete and re-add for now.
+- Activities and tasks for companies and deals arrive with their screens; the data layer already accepts them.
 
 ## Phase 5 (Home, ⌘K, CSV, deploy) — deploy hardening
 
