@@ -14,8 +14,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Personal CRM", template: "%s · Personal CRM" },
-  description: "Contacts, restaurants and investors in one place.",
+  title: { default: "Rapport", template: "%s · Rapport" },
+  description: "Your restaurants, investors and the people in between.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
