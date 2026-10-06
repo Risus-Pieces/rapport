@@ -166,10 +166,10 @@ screen follows:
 5. The priority meter uses `bg-primary` for on-steps and `bg-accent` for
    off-steps, and is always paired with a text label.
 6. Form controls are `h-11 rounded-xl border-input bg-secondary text-base`
-   with the opaque 2px ring and offset. Textarea and Select get this in
-   Phase 2's first task.
-7. `Card` has `overflow-hidden`: full-bleed list rows inside a card need
-   padding, or an `overflow-visible` card, so focus rings are not clipped.
+   with the opaque 2px ring and offset. Textarea, Select, Dialog and
+   the dropdown menu follow it; menu and select items show an inset ring on focus.
+7. `Card` no longer clips its children, so focus rings on full-bleed list rows
+   are visible. Rows inside a card still need their own corner rounding.
 8. Hover is `hover:bg-accent` or `hover:border-input`, never a fill closer
    than 1.5:1 to its surface.
 

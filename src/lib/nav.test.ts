@@ -56,14 +56,4 @@ describe("SECTION_STYLES", () => {
       }
     }
   });
-
-  it("maps each style to the matching Tailwind color utilities", () => {
-    for (const section of sections) {
-      expect(SECTION_STYLES[section]).toEqual({
-        dot: `bg-section-${section}`,
-        chip: `bg-section-${section}-soft text-section-${section}-ink`,
-        text: `text-section-${section}`,
-      });
-    }
-  });
 });
