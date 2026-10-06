@@ -30,7 +30,7 @@ export function SignOutButton() {
   }
 
   return (
-    <Button variant="ghost" size="icon" aria-label="Sign out" disabled={pending} onClick={signOut}>
+    <Button variant="ghost" size="icon-lg" aria-label="Sign out" disabled={pending} onClick={signOut}>
       <LogOut />
     </Button>
   );

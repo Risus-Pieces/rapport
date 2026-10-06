@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
-import { PRIMARY_NAV, SECONDARY_NAV, isActivePath, type NavItem } from "@/lib/nav";
+import { initials } from "@/lib/greeting";
+import { PRIMARY_NAV, SECONDARY_NAV, SECTION_STYLES, isActivePath, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -16,21 +17,29 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-        active && "bg-accent text-foreground",
+        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+        active && "bg-accent font-medium text-foreground hover:bg-accent",
       )}
     >
-      <Icon
-        className="size-4 shrink-0"
-        style={item.accent && active ? { color: `var(--section-${item.accent})` } : undefined}
-      />
+      {/* The fill alone is too faint to count as a cue, so the active item also gets this bar. */}
+      {active ? (
+        <span aria-hidden className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary" />
+      ) : null}
+      <span aria-hidden className="flex size-5 shrink-0 items-center justify-center">
+        {item.accent ? (
+          <span className={cn("size-2.5 rounded-full", SECTION_STYLES[item.accent].dot)} />
+        ) : (
+          <Icon className="size-5" />
+        )}
+      </span>
       {item.label}
     </Link>
   );
 }
 
-export function Sidebar({ email }: { email: string }) {
+export function Sidebar({ name, email }: { name?: string | null; email: string }) {
   const pathname = usePathname();
+  const displayName = name?.trim() || email;
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
       <div className="px-6 pb-4 pt-7">
@@ -45,14 +54,27 @@ export function Sidebar({ email }: { email: string }) {
         {SECONDARY_NAV.map((item) => (
           <SidebarLink key={item.href} item={item} pathname={pathname} />
         ))}
-        <div className="flex items-center justify-between gap-2 px-1">
-          <p className="min-w-0 truncate px-2 text-xs text-muted-foreground" title={email}>
-            {email}
-          </p>
-          <div className="flex shrink-0">
-            <ThemeToggle />
-            <SignOutButton />
+        <div className="flex items-center gap-3 px-3 pt-2">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-foreground"
+          >
+            {initials(name, email)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium" title={displayName}>
+              {displayName}
+            </p>
+            {displayName !== email ? (
+              <p className="truncate text-xs text-muted-foreground" title={email}>
+                {email}
+              </p>
+            ) : null}
           </div>
+        </div>
+        <div className="flex items-center gap-1 px-1">
+          <ThemeToggle />
+          <SignOutButton />
         </div>
       </div>
     </aside>

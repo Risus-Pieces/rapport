@@ -137,7 +137,7 @@ Routes under an authenticated `(app)` group: `/` (Home), `/restaurants`,
   - Restaurants and Investors: **Pipeline** (kanban, drag between stages),
     **List** (sortable, filterable table), **People**, **Companies**. Investors
     adds an All / Angels / Institutions filter (`?type=`).
-  - General: contact list with priority colors and an overdue filter.
+  - General: contact list with a priority meter and an overdue filter.
 - **Record detail:** a side panel, opened via a URL param (for example
   `?open=deal:<id>`) so it is linkable and works with the back button. Header
   with key facts and next step; one-click *Log call / email / meeting / tasting*
