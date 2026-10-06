@@ -30,7 +30,7 @@ export function askHidden(prompt: string): Promise<string> {
           process.stdout.write("\n");
           return resolve(value);
         }
-        if (char === "\u007f") {
+        if (char === "\u007f" || char === "\b") {
           value = value.slice(0, -1);
           continue;
         }

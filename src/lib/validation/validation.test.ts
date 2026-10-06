@@ -14,9 +14,14 @@ describe("contactSchema", () => {
       linkedinUrl: null,
       notes: null,
       priority: null,
-      companyId: null,
       tags: [],
     });
+    expect(result.companyId).toBeUndefined();
+  });
+
+  it("distinguishes a missing company field (unchanged) from a blank one (cleared)", () => {
+    expect(contactSchema.parse({ name: "A" }).companyId).toBeUndefined();
+    expect(contactSchema.parse({ name: "A", companyId: "" }).companyId).toBeNull();
   });
 
   it("turns blank form strings into null", () => {

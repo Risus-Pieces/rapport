@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, isNotNull, isNull, max, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, max, or } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals, tasks, type ActivityType, type Section } from "@/db/schema";
 import { getReminder, TOUCH_TYPES, compareReminders } from "@/lib/reminders";
@@ -15,7 +15,9 @@ export type ContactRow = typeof contacts.$inferSelect & {
 };
 
 function withReminder<T extends ContactRow>(row: T, now: Date) {
-  return { ...row, reminder: getReminder(row.priority, row.lastTouchAt, row.createdAt, now) };
+  // An archived contact is hidden from follow-ups, so it never shows a live reminder.
+  const priority = row.archivedAt ? null : row.priority;
+  return { ...row, reminder: getReminder(priority, row.lastTouchAt, row.createdAt, now) };
 }
 
 export type ContactListItem = ReturnType<typeof withReminder<ContactRow>>;
@@ -80,9 +82,8 @@ export async function listRecentActivities(userId: string, contactId: string, li
     .select()
     .from(activities)
     .where(and(eq(activities.userId, userId), eq(activities.contactId, contactId)))
-    .orderBy(activities.occurredAt)
-    .limit(limit)
-    .then((rows) => rows.reverse());
+    .orderBy(desc(activities.occurredAt), desc(activities.createdAt))
+    .limit(limit);
 }
 
 export class InvalidCompanyError extends Error {
@@ -101,7 +102,7 @@ async function assertCompany(userId: string, section: Section, companyId: string
 }
 
 export async function createContact(userId: string, section: Section, input: ContactInput) {
-  await assertCompany(userId, section, input.companyId);
+  await assertCompany(userId, section, input.companyId ?? null);
   const [created] = await db
     .insert(contacts)
     .values({ userId, section, ...input })
@@ -109,26 +110,26 @@ export async function createContact(userId: string, section: Section, input: Con
   return created;
 }
 
-export async function updateContact(userId: string, id: string, input: ContactInput) {
+export async function updateContact(userId: string, section: Section, id: string, input: ContactInput) {
   const [existing] = await db
-    .select({ section: contacts.section })
+    .select({ id: contacts.id })
     .from(contacts)
-    .where(and(eq(contacts.userId, userId), eq(contacts.id, id)));
+    .where(and(eq(contacts.userId, userId), eq(contacts.section, section), eq(contacts.id, id)));
   if (!existing) return null;
-  await assertCompany(userId, existing.section, input.companyId);
+  await assertCompany(userId, section, input.companyId ?? null);
   const [updated] = await db
     .update(contacts)
     .set(input)
-    .where(and(eq(contacts.userId, userId), eq(contacts.id, id)))
+    .where(and(eq(contacts.userId, userId), eq(contacts.section, section), eq(contacts.id, id)))
     .returning();
   return updated ?? null;
 }
 
-export async function setContactArchived(userId: string, id: string, archived: boolean) {
+export async function setContactArchived(userId: string, section: Section, id: string, archived: boolean) {
   const [updated] = await db
     .update(contacts)
     .set({ archivedAt: archived ? new Date() : null })
-    .where(and(eq(contacts.userId, userId), eq(contacts.id, id)))
+    .where(and(eq(contacts.userId, userId), eq(contacts.section, section), eq(contacts.id, id)))
     .returning({ id: contacts.id });
   return Boolean(updated);
 }
@@ -159,12 +160,12 @@ export async function getContactDeleteImpact(userId: string, id: string) {
 // Deletes the contact and its activities. Deals use NO ACTION, so they are handled first, inside
 // the same transaction: a deal whose only party is this contact (an angel) is deleted; a deal that
 // also has a company keeps it and just loses the contact. Tasks stay and lose the link (set null).
-export async function deleteContact(userId: string, id: string) {
+export async function deleteContact(userId: string, section: Section, id: string) {
   return db.transaction(async (tx) => {
     const owned = await tx
       .select({ id: contacts.id })
       .from(contacts)
-      .where(and(eq(contacts.userId, userId), eq(contacts.id, id)));
+      .where(and(eq(contacts.userId, userId), eq(contacts.section, section), eq(contacts.id, id)));
     if (owned.length === 0) return false;
     await tx.delete(deals).where(and(eq(deals.userId, userId), eq(deals.contactId, id), isNull(deals.companyId)));
     await tx

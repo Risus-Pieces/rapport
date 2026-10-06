@@ -22,7 +22,6 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
     linkedinUrl: null,
     notes: null,
     priority: null,
-    companyId: null,
     tags: [] as string[],
     ...extra,
   });
@@ -69,9 +68,9 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
   it("scopes every read and write to the owner", async () => {
     const mine = await c.createContact(owner, "general", input("Private Pat"));
     expect(await c.getContact(other, mine.id)).toBeNull();
-    expect(await c.updateContact(other, mine.id, input("Hijacked"))).toBeNull();
-    expect(await c.setContactArchived(other, mine.id, true)).toBe(false);
-    expect(await c.deleteContact(other, mine.id)).toBe(false);
+    expect(await c.updateContact(other, "general", mine.id, input("Hijacked"))).toBeNull();
+    expect(await c.setContactArchived(other, "general", mine.id, true)).toBe(false);
+    expect(await c.deleteContact(other, "general", mine.id)).toBe(false);
     expect(await c.logTouch(other, mine.id, { type: "call", summary: "x" })).toBeNull();
     expect((await c.listContacts(other, "general")).some((x) => x.id === mine.id)).toBe(false);
     expect((await c.getContact(owner, mine.id))?.name).toBe("Private Pat");
@@ -80,6 +79,43 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
     expect(await co.getCompany(other, company.id)).toBeNull();
     expect(await co.updateCompany(other, company.id, companyInput("Hijacked"))).toBeNull();
     expect(await co.deleteCompany(other, company.id)).toBe(false);
+  });
+
+  it("only touches contacts in the section the caller names", async () => {
+    const partner = await c.createContact(owner, "investors", input("Partner Pat"));
+    expect(await c.updateContact(owner, "general", partner.id, input("Renamed"))).toBeNull();
+    expect(await c.setContactArchived(owner, "general", partner.id, true)).toBe(false);
+    expect(await c.deleteContact(owner, "general", partner.id)).toBe(false);
+    expect((await c.getContact(owner, partner.id))?.name).toBe("Partner Pat");
+  });
+
+  it("keeps the company link when an update does not mention it, and clears it when blank", async () => {
+    const company = await co.createCompany(owner, "restaurants", companyInput("Linked Co"));
+    const person = await c.createContact(owner, "restaurants", input("Linked", { companyId: company.id }));
+    await c.updateContact(owner, "restaurants", person.id, input("Linked Renamed"));
+    expect((await c.getContact(owner, person.id))?.companyId).toBe(company.id);
+    await c.updateContact(owner, "restaurants", person.id, input("Linked Renamed", { companyId: null }));
+    expect((await c.getContact(owner, person.id))?.companyId).toBeNull();
+  });
+
+  it("lists the newest activities first and caps the list", async () => {
+    const person = await c.createContact(owner, "general", input("Chatty"));
+    for (let i = 0; i < 12; i++) {
+      await c.logTouch(owner, person.id, { type: "call", summary: `call ${i}`, occurredAt: days(30 - i) });
+    }
+    const recent = await c.listRecentActivities(owner, person.id, 10);
+    expect(recent).toHaveLength(10);
+    expect(recent[0].summary).toBe("call 11");
+    expect(recent[9].summary).toBe("call 2");
+  });
+
+  it("shows no live reminder for an archived contact", async () => {
+    const person = await c.createContact(owner, "general", input("Archived Late", { priority: "very_high" }));
+    await db.update(s.contacts).set({ createdAt: days(100) }).where(eq(s.contacts.id, person.id));
+    await c.setContactArchived(owner, "general", person.id, true);
+    const [row] = (await c.listContacts(owner, "general", { archived: true })).filter((x) => x.id === person.id);
+    expect(row.reminder.status).toBe("none");
+    expect((await c.getContact(owner, person.id))?.reminder.status).toBe("none");
   });
 
   it("matches search text literally, including % and _", async () => {
@@ -92,10 +128,10 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
 
   it("hides archived contacts by default and restores them", async () => {
     const x = await c.createContact(owner, "general", input("Archivable"));
-    await c.setContactArchived(owner, x.id, true);
+    await c.setContactArchived(owner, "general", x.id, true);
     expect((await c.listContacts(owner, "general")).some((r) => r.id === x.id)).toBe(false);
     expect((await c.listContacts(owner, "general", { archived: true })).some((r) => r.id === x.id)).toBe(true);
-    await c.setContactArchived(owner, x.id, false);
+    await c.setContactArchived(owner, "general", x.id, false);
     expect((await c.listContacts(owner, "general")).some((r) => r.id === x.id)).toBe(true);
   });
 
@@ -126,7 +162,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
         tasks: 1,
       });
 
-      expect(await c.deleteContact(owner, contact.id)).toBe(true);
+      expect(await c.deleteContact(owner, "investors", contact.id)).toBe(true);
 
       expect(await db.select().from(s.activities).where(eq(s.activities.contactId, contact.id))).toHaveLength(0);
       expect(await db.select().from(s.deals).where(eq(s.deals.id, deal.id))).toHaveLength(0);
@@ -149,7 +185,7 @@ describe.skipIf(!hasDevDb)("contacts and companies data layer (runs against the 
         })
         .returning();
       expect((await c.getContactDeleteImpact(owner, chef.id)).detachedDeals).toBe(1);
-      await c.deleteContact(owner, chef.id);
+      await c.deleteContact(owner, "restaurants", chef.id);
       const [kept] = await db.select().from(s.deals).where(eq(s.deals.id, deal.id));
       expect(kept.contactId).toBeNull();
       expect(kept.companyId).toBe(company.id);

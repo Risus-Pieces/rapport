@@ -40,7 +40,7 @@ export async function saveContactAction(_prev: ContactFormState, formData: FormD
   let savedId: string;
   try {
     if (id) {
-      const updated = await updateContact(session.user.id, id.data, parsed.data);
+      const updated = await updateContact(session.user.id, SECTION, id.data, parsed.data);
       if (!updated) return { errors: {}, message: "That contact no longer exists.", values };
       savedId = updated.id;
     } else {
@@ -60,7 +60,7 @@ export async function archiveContactAction(formData: FormData) {
   const id = uuid.safeParse(formData.get("id"));
   if (!id.success) return;
   const archived = formData.get("archived") === "true";
-  await setContactArchived(session.user.id, id.data, archived);
+  await setContactArchived(session.user.id, SECTION, id.data, archived);
   refresh(id.data);
   redirect(archived ? "/general" : `/general/${id.data}`);
 }
@@ -69,7 +69,7 @@ export async function deleteContactAction(formData: FormData) {
   const session = await requireSession();
   const id = uuid.safeParse(formData.get("id"));
   if (!id.success) return;
-  await deleteContact(session.user.id, id.data);
+  await deleteContact(session.user.id, SECTION, id.data);
   refresh();
   redirect("/general");
 }

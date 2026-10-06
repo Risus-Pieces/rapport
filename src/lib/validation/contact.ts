@@ -8,11 +8,12 @@ const priorityField = z
   .transform((value) => (value === "" ? null : value))
   .pipe(z.enum(PRIORITIES).nullable());
 
+// A form without a company field leaves the link alone (undefined); a blank field clears it.
 const companyIdField = z
   .string()
-  .default("")
-  .transform((value) => (value === "" ? null : value))
-  .pipe(uuid.nullable());
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value === "" ? null : value))
+  .pipe(uuid.nullable().optional());
 
 export const contactSchema = z.object({
   name: z.string().trim().min(1, "Enter a name.").max(200, "Keep the name under 200 characters."),
