@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "seed:owner": "tsx --env-file=.env.local scripts/seed-owner.ts"
+    "seed:owner": "tsx --env-file=.env.local scripts/seed-owner.ts",
+    "reset:owner-password": "tsx --env-file=.env.local scripts/reset-owner-password.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
