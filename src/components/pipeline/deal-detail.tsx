@@ -19,6 +19,8 @@ import { formatDay, todayString } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { deletionSummary } from "@/lib/delete-summary";
 import { FIRM_TYPE_LABELS, getStage, INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
+import { OutreachPanel } from "@/components/radar/outreach-panel";
+import { getOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 
@@ -42,7 +44,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 const str = (value: unknown) => (typeof value === "string" && value ? value : null);
 
-export async function DealDetail({ section, id }: { section: PipelineSection; id: string }) {
+export async function DealDetail({ section, id, outreachError }: { section: PipelineSection; id: string; outreachError?: string }) {
   const { userId, deal } = await loadDeal(section, id);
   const config = PIPELINES[section];
   const stage = getStage(section, deal.stage);
@@ -51,7 +53,7 @@ export async function DealDetail({ section, id }: { section: PipelineSection; id
   const contact = deal.contactDetails ?? {};
   const today = todayString();
 
-  const [activities, openTasks, doneTasks, people, impact] = await Promise.all([
+  const [activities, openTasks, doneTasks, people, impact, outreach] = await Promise.all([
     listDealActivities(userId, deal.id),
     listOpenTasks(userId, { dealId: deal.id }),
     listDoneTasks(userId, { dealId: deal.id, limit: 5 }),
@@ -61,6 +63,7 @@ export async function DealDetail({ section, id }: { section: PipelineSection; id
       : deal.contactId
         ? getContactDeleteImpact(userId, deal.contactId).then((i) => ({ ...i, contacts: 0 }))
         : Promise.resolve({ activities: 0, deals: 0, tasks: 0, contacts: 0 }),
+    getOutreachFor(userId, { dealId: deal.id }),
   ]);
   const summary = `${deletionSummary(impact).replace("this contact", "this record")}${impact.contacts > 0 ? ` ${impact.contacts} ${impact.contacts === 1 ? "person stays" : "people stay"} but lose the link to this company.` : ""}`;
 
@@ -87,6 +90,7 @@ export async function DealDetail({ section, id }: { section: PipelineSection; id
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
+          {outreach ? <OutreachPanel userId={userId} outreach={outreach} back={`/${section}/${deal.id}`} error={outreachError} /> : null}
           <Card className="gap-4 p-5">
             <h2 className="font-medium">Next step</h2>
             {deal.nextStep ? (
