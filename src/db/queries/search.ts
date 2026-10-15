@@ -1,7 +1,8 @@
 import { and, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
-import { contacts, deals } from "@/db/schema";
+import { contacts, deals, radarItems } from "@/db/schema";
 import { INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
+import { FEED_LABELS, type Feed } from "@/lib/radar/types";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -76,6 +77,20 @@ export async function searchRecords(userId: string, query: string): Promise<Sear
       label: contact.name,
       detail: [contact.section === "general" ? "General" : PIPELINES[contact.section as PipelineSection].label, contact.title].filter(Boolean).join(" · "),
       href,
+    });
+  }
+  const radarRows = await db
+    .select({ id: radarItems.id, title: radarItems.title, feed: radarItems.feed, kind: radarItems.kind, status: radarItems.status })
+    .from(radarItems)
+    .where(and(eq(radarItems.userId, userId), ilike(radarItems.title, pattern)))
+    .limit(LIMIT);
+  for (const item of radarRows) {
+    const view = item.status === "approved" || item.status === "dismissed" || item.status === "saved" ? `&view=${item.status}` : "";
+    hits.push({
+      id: `radar:${item.id}`,
+      label: item.title,
+      detail: ["Radar", FEED_LABELS[item.feed as Feed] ?? item.feed, item.kind].join(" · "),
+      href: `/radar?feed=${item.feed}${view}&q=${encodeURIComponent(item.title)}`,
     });
   }
   return hits;

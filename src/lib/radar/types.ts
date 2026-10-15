@@ -2,6 +2,7 @@
 export const FEEDS = ["sooz", "personal", "career"] as const;
 export type Feed = (typeof FEEDS)[number];
 export const isFeed = (f: string): f is Feed => (FEEDS as readonly string[]).includes(f);
+export const FEED_LABELS: Record<Feed, string> = { sooz: "Sooz", personal: "Personal", career: "Career" };
 
 export const RADAR_STATUSES = ["new", "seen", "saved", "dismissed", "approved"] as const;
 export type RadarStatus = (typeof RADAR_STATUSES)[number];

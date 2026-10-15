@@ -15,6 +15,7 @@ const EXPORT_LABELS: Record<(typeof EXPORT_KINDS)[number], string> = {
   deals: "Deals",
   activities: "Activities",
   tasks: "Tasks",
+  radar: "Radar",
 };
 
 export default async function SettingsPage() {
