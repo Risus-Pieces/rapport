@@ -64,9 +64,9 @@ export type DealRow = {
   contactDetails: Record<string, unknown> | null;
 };
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-async function nextSortKey(tx: Tx, userId: string, section: PipelineSection, stage: string) {
+export async function nextSortKey(tx: Tx, userId: string, section: PipelineSection, stage: string) {
   const [row] = await tx
     .select({ top: max(deals.sortKey) })
     .from(deals)

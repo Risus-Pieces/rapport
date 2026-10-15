@@ -4,6 +4,7 @@ import { ReminderBadge } from "@/components/reminder-badge";
 import { TaskList } from "@/components/tasks/task-list";
 import { PipelineSnapshot } from "@/components/pipeline-snapshot";
 import { pipelineSnapshot, recentActivities } from "@/db/queries/dashboard";
+import { outreachDraftCounts, radarNewCounts, radarPeopleNewCount } from "@/db/queries/radar";
 import { formatDay } from "@/lib/dates";
 import { listFollowUps } from "@/db/queries/contacts";
 import { listOpenTasks } from "@/db/queries/tasks";
@@ -30,13 +31,23 @@ const SECTION_TILES = PRIMARY_NAV.flatMap((item) => (item.accent ? [{ ...item, a
 export default async function HomePage() {
   const session = await requireSession();
   const today = todayString();
-  const [openTasks, followUps, restaurants, investors, recent] = await Promise.all([
+  const [openTasks, followUps, restaurants, investors, recent, radarNew, peopleNew, drafts] = await Promise.all([
     listOpenTasks(session.user.id),
     listFollowUps(session.user.id),
     pipelineSnapshot(session.user.id, "restaurants"),
     pipelineSnapshot(session.user.id, "investors"),
     recentActivities(session.user.id),
+    radarNewCounts(session.user.id),
+    radarPeopleNewCount(session.user.id),
+    outreachDraftCounts(session.user.id),
   ]);
+  const radarLinks = [
+    { label: "new people", n: peopleNew, href: "/radar" },
+    { label: "Sooz opportunities", n: radarNew.sooz - peopleNew, href: "/radar?tab=sooz" },
+    { label: "Personal", n: radarNew.personal, href: "/radar?tab=personal" },
+    { label: "Career", n: radarNew.career, href: "/radar?tab=career" },
+    { label: drafts.waiting === 1 ? "draft waiting for your approval" : "drafts waiting for your approval", n: drafts.waiting, href: "/radar" },
+  ].filter((l) => l.n > 0);
   const groups = groupOpenTasks(openTasks, today);
   const dueTasks = [...groups.overdue, ...groups.today];
   const total = dueTasks.length + followUps.length;
@@ -97,6 +108,32 @@ export default async function HomePage() {
               ) : null}
             </section>
           ) : null}
+        </Card>
+        <Card className="gap-3 p-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-medium">Radar</h2>
+            <Link href="/radar" className="text-sm text-primary hover:underline">
+              Open Radar
+            </Link>
+          </div>
+          {radarLinks.length === 0 && drafts.ready === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing new. Research runs Mondays (Sooz) and Thursdays (Personal and Career).</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {drafts.ready > 0 ? (
+                <li className="rounded-full bg-accent px-3 py-1.5 text-sm">
+                  {drafts.ready} {drafts.ready === 1 ? "draft" : "drafts"} ready to send from the CRM
+                </li>
+              ) : null}
+              {radarLinks.map((l) => (
+                <li key={l.label}>
+                  <Link href={l.href} className="inline-flex min-h-9 items-center rounded-full border border-input px-3 text-sm hover:bg-accent">
+                    {l.n} {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
         <section aria-labelledby="pipelines-heading">
           <h2 id="pipelines-heading" className="mb-3 text-base font-medium">

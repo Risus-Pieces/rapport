@@ -2,10 +2,13 @@ import { BottomTabs } from "@/components/bottom-tabs";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileHeader } from "@/components/mobile-header";
 import { Sidebar } from "@/components/sidebar";
+import { radarNewCounts } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
+  const fresh = await radarNewCounts(session.user.id);
+  const counts = { "/radar": fresh.sooz + fresh.personal + fresh.career };
   return (
     <div className="min-h-dvh md:flex">
       <a
@@ -14,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         Skip to content
       </a>
-      <Sidebar name={session.user.name} email={session.user.email} />
+      <Sidebar name={session.user.name} email={session.user.email} counts={counts} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader />
         <main
@@ -25,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
-      <BottomTabs />
+      <BottomTabs counts={counts} />
       <CommandPalette />
     </div>
   );

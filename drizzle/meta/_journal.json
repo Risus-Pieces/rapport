@@ -15,6 +15,34 @@
       "when": 1791319508477,
       "tag": "0001_rate_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792034721191,
+      "tag": "0002_radar_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792034732518,
+      "tag": "0003_radar_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792034924284,
+      "tag": "0004_radar_outreach",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792035973862,
+      "tag": "0005_radar_grants",
+      "breakpoints": true
     }
   ]
 }

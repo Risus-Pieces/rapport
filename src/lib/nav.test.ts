@@ -25,8 +25,8 @@ describe("nav config", () => {
     expect(hrefs.every((href) => href.startsWith("/"))).toBe(true);
   });
 
-  it("keeps exactly five primary items so the phone tab bar fits", () => {
-    expect(PRIMARY_NAV).toHaveLength(5);
+  it("puts Radar right after Home, and keeps six primary items (six 44px tabs fit a 360px phone)", () => {
+    expect(PRIMARY_NAV.map((item) => item.href)).toEqual(["/", "/radar", "/restaurants", "/investors", "/general", "/tasks"]);
   });
 });
 

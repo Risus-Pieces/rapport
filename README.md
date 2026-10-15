@@ -2,6 +2,45 @@
 
 Rapport is a single-owner CRM for three areas of your life: **Restaurants** (accounts you sell to), **Investors** (angels and institutions in a fundraising pipeline) and **General** (friends, family and professional contacts you want to stay in touch with).
 
+## Radar (research → approve → CRM)
+
+The **Radar** tab is the research feed that used to be a separate app (Query). Weekly research routines find people and
+opportunities and write them into four feeds: **Sooz people** (angels, celebrities and athletes, next-gen investors,
+creators and college athletes, retail buyers, press), **Sooz** (events, sampling slots, funding, resources),
+**Personal** and **Career**. Review them like an inbox (save, dismiss, notes, filters, search).
+
+- **Approve** a person (one at a time) and they land in the CRM: angels and next-gen investors as an Investors angel deal
+  at Target; buyers as a Restaurants company + contact + Lead deal (a second buyer at the same store joins the same
+  deal); celebrities, creators and press as a General contact with high priority. The research (source, why, contact
+  route) is kept on the contact, and an "Added from Radar" note starts the timeline.
+- **Outreach** lives on the deal or contact page: purpose (investor, ambassador, buyer, press, intro), drafts, *Open in
+  Gmail* (nothing is ever sent for you), *Mark sent* (logs an email, adds a follow-up task in 5 days, moves Target →
+  Intro or Lead → Contacted), follow-ups (+7 days, 3 touches max), *They replied*.
+- **Settings** holds your pitch facts (the only facts drafts use), LinkedIn connections (warm paths), a people CSV
+  import into the Radar, and a Radar CSV export.
+
+### Routines
+
+Five Claude desktop scheduled tasks run on the owner's Mac (they read `routines/*.md` from this folder at run time):
+
+| Task | When (Central) | Does |
+|---|---|---|
+| Sooz research | Mon ~8:00 | every `sooz-*` task in `src/lib/radar/briefs.ts` → `rr_ingest()` |
+| Outreach prep | Mon ~9:15 | queues approved people and strong (75+) finds, enriches public contacts (≤5 Apollo lookups), drafts per purpose, watches Gmail for sends/replies to approved people |
+| Digest | Mon ~10:30 | `rr_digest_email()` → one email to the owner → `rr_mark_digested()` |
+| Personal & Career research | Thu ~8:00 | every `personal-*` and `career-*` task |
+| Digest | Thu ~10:30 | same digest |
+
+Regenerate the prompts after editing briefs: `npm run routine-prompt -- research sooz` (or `personal,career`,
+`outreach`, `digest`) > `routines/<file>.md`.
+
+**Database access for routines.** Routines connect through the Neon connector as `radar_routine`, a role that can only
+execute the `rr_*` functions (`drizzle/0003`–`0005`); it cannot read contacts, deals or auth tables. Create it in SQL,
+not through the Neon API (API roles join `neon_superuser` and can read everything), on each branch before migrating:
+`create role radar_routine login password '<random>';`.
+
+**Moving data from Query** (done once on 2026-10-14; idempotent): `QUERY_DATABASE_URL=… DATABASE_URL=… npm run import:query`.
+
 ## Stack
 
 Next.js 16 (App Router) · TypeScript · Tailwind v4 + shadcn/ui · Neon Postgres · Drizzle ORM · Better Auth · Vitest

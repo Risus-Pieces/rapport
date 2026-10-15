@@ -3,6 +3,7 @@ export type PaletteItem = { label: string; href: string };
 export const PALETTE_ITEMS: { pages: PaletteItem[]; actions: PaletteItem[] } = {
   pages: [
     { label: "Home", href: "/" },
+    { label: "Radar", href: "/radar" },
     { label: "Restaurants", href: "/restaurants" },
     { label: "Investors", href: "/investors" },
     { label: "General", href: "/general" },

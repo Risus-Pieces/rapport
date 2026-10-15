@@ -10,7 +10,7 @@ import { initials } from "@/lib/greeting";
 import { PRIMARY_NAV, SECONDARY_NAV, SECTION_STYLES, isActivePath, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
-function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
+function SidebarLink({ item, pathname, count = 0 }: { item: NavItem; pathname: string; count?: number }) {
   const active = isActivePath(pathname, item.href);
   const Icon = item.icon;
   return (
@@ -34,11 +34,17 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
         )}
       </span>
       {item.label}
+      {count > 0 ? (
+        <span className="ml-auto rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
+          {count}
+          <span className="sr-only"> new</span>
+        </span>
+      ) : null}
     </Link>
   );
 }
 
-export function Sidebar({ name, email }: { name?: string | null; email: string }) {
+export function Sidebar({ name, email, counts = {} }: { name?: string | null; email: string; counts?: Record<string, number> }) {
   const pathname = usePathname();
   const displayName = name?.trim() || email;
   return (
@@ -51,7 +57,7 @@ export function Sidebar({ name, email }: { name?: string | null; email: string }
       </div>
       <nav aria-label="Main" className="flex-1 space-y-1 px-3 py-2">
         {PRIMARY_NAV.map((item) => (
-          <SidebarLink key={item.href} item={item} pathname={pathname} />
+          <SidebarLink key={item.href} item={item} pathname={pathname} count={counts[item.href]} />
         ))}
       </nav>
       <div className="shrink-0 space-y-2 border-t border-border p-3">

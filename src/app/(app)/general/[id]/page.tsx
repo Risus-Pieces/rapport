@@ -16,6 +16,8 @@ import { TaskForm } from "@/components/tasks/task-form";
 import { TaskList } from "@/components/tasks/task-list";
 import { formatDay, todayString } from "@/lib/dates";
 import { describeLastTouch } from "@/lib/reminders";
+import { OutreachPanel } from "@/components/radar/outreach-panel";
+import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 import { archiveContactAction } from "../actions";
@@ -37,17 +39,25 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-export default async function ContactPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ContactPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const outreachError = (await searchParams).outreachError;
   const session = await requireSession();
   const id = uuid.safeParse((await params).id);
   if (!id.success) notFound();
   const contact = await getContact(session.user.id, id.data);
   if (!contact || contact.section !== "general") notFound();
-  const [impact, activities, openTasks, doneTasks] = await Promise.all([
+  const [impact, activities, openTasks, doneTasks, outreach] = await Promise.all([
     getContactDeleteImpact(session.user.id, contact.id),
     listContactActivities(session.user.id, contact.id),
     listOpenTasks(session.user.id, { contactId: contact.id }),
     listDoneTasks(session.user.id, { contactId: contact.id, limit: 5 }),
+    listOutreachFor(session.user.id, { contactId: contact.id }),
   ]);
   const today = todayString();
   const archived = contact.archivedAt !== null;
@@ -83,6 +93,20 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
+          {outreach.length ? (
+            <div id="outreach" className="scroll-mt-6 space-y-6">
+              {outreach.map((o, i) => (
+                <OutreachPanel
+                  key={o.id}
+                  userId={session.user.id}
+                  outreach={o}
+                  back={`/general/${contact.id}`}
+                  error={i === 0 && typeof outreachError === "string" ? outreachError : undefined}
+                  showName={outreach.length > 1}
+                />
+              ))}
+            </div>
+          ) : null}
           <Card className="gap-4 p-5">
             <h2 className="font-medium">Stay in touch</h2>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">

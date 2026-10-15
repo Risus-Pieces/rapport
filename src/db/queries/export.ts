@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, companies, contacts, deals, tasks } from "@/db/schema";
+import { activities, companies, contacts, deals, radarItems, tasks } from "@/db/schema";
 
 // Every export is scoped to one owner. Column names for contacts match the importer.
 
-export const EXPORT_KINDS = ["contacts", "companies", "deals", "activities", "tasks"] as const;
+export const EXPORT_KINDS = ["contacts", "companies", "deals", "activities", "tasks", "radar"] as const;
 export type ExportKind = (typeof EXPORT_KINDS)[number];
 
 export function isExportKind(value: string): value is ExportKind {
@@ -88,6 +88,17 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
         columns: ["id", "title", "due_date", "done_at", "contact", "deal", "created_at"],
         rows: data.map(({ t, contactName, dealTitle }) => ({
           id: t.id, title: t.title, due_date: t.dueDate, done_at: t.doneAt, contact: contactName, deal: dealTitle, created_at: t.createdAt,
+        })),
+      };
+    }
+    case "radar": {
+      const data = await db.select().from(radarItems).where(eq(radarItems.userId, userId)).orderBy(radarItems.feed, radarItems.firstSeen);
+      return {
+        columns: ["id", "feed", "kind", "title", "url", "status", "score", "summary", "why_relevant", "tags", "details", "event_date", "deadline", "location", "notes", "first_seen"],
+        rows: data.map((r) => ({
+          id: r.id, feed: r.feed, kind: r.kind, title: r.title, url: r.url, status: r.status, score: r.score, summary: r.summary,
+          why_relevant: r.whyRelevant, tags: r.tags, details: JSON.stringify(r.details), event_date: r.eventDate, deadline: r.deadline,
+          location: r.location, notes: r.notes, first_seen: r.firstSeen,
         })),
       };
     }
