@@ -219,9 +219,21 @@ const VIEW_STATUSES: Record<RadarView, string[]> = {
 export const RADAR_SORTS = ["score", "date", "newest"] as const;
 export type RadarSort = (typeof RADAR_SORTS)[number];
 
-export type RadarFilters = { feed: Feed; view: RadarView; kind?: string; q?: string; rice?: boolean; sort: RadarSort };
+/** people: true = person kinds only, false = everything but people, undefined = all. */
+export type RadarFilters = { feed: Feed; view: RadarView; kind?: string; q?: string; rice?: boolean; sort: RadarSort; people?: boolean };
 
-export type RadarRow = typeof radarItems.$inferSelect & { outreachStage: string | null; hasDraft: boolean };
+export type RadarRow = typeof radarItems.$inferSelect & {
+  outreachStage: string | null;
+  hasDraft: boolean;
+  draft: { subject: string | null; body: string } | null;
+};
+
+const peopleFilter = (people: boolean | undefined) =>
+  people === undefined
+    ? undefined
+    : people
+      ? inArray(radarItems.kind, [...PERSON_KINDS])
+      : sql`${radarItems.kind} not in (${sql.join(PERSON_KINDS.map((k) => sql`${k}`), sql`, `)})`;
 
 // Past events are noise in the inbox; they stay visible once the owner has acted on them.
 const notPast = sql`(coalesce(${radarItems.eventDate}, ${radarItems.deadline}) is null or coalesce(${radarItems.eventDate}, ${radarItems.deadline}) >= current_date)`;
@@ -234,6 +246,7 @@ export async function listRadar(userId: string, f: RadarFilters): Promise<RadarR
     eq(radarItems.feed, f.feed),
     inArray(radarItems.status, VIEW_STATUSES[f.view]),
     f.kind ? eq(radarItems.kind, f.kind) : undefined,
+    peopleFilter(f.people),
     f.rice ? sql`'rice' = any(${radarItems.tags})` : undefined,
     f.view === "inbox" ? notPast : undefined,
     pattern
@@ -253,16 +266,21 @@ export async function listRadar(userId: string, f: RadarFilters): Promise<RadarR
         ? [desc(radarItems.firstSeen), desc(radarItems.score)]
         : [desc(radarItems.score), desc(radarItems.firstSeen)];
   const rows = await db
-    .select({ item: radarItems, outreachStage: outreach.stage, body: outreach.body })
+    .select({ item: radarItems, outreachStage: outreach.stage, subject: outreach.subject, body: outreach.body })
     .from(radarItems)
     .leftJoin(outreach, eq(outreach.radarItemId, radarItems.id))
     .where(and(...where))
     .orderBy(...order)
     .limit(300);
-  return rows.map((r) => ({ ...r.item, outreachStage: r.outreachStage, hasDraft: r.body !== null }));
+  return rows.map((r) => ({
+    ...r.item,
+    outreachStage: r.outreachStage,
+    hasDraft: r.body !== null,
+    draft: r.body !== null ? { subject: r.subject, body: r.body } : null,
+  }));
 }
 
-export async function radarCounts(userId: string, feed: Feed): Promise<Record<RadarView, number>> {
+export async function radarCounts(userId: string, feed: Feed, people?: boolean): Promise<Record<RadarView, number>> {
   const rows = await db
     .select({ status: radarItems.status, n: count() })
     .from(radarItems)
@@ -270,6 +288,7 @@ export async function radarCounts(userId: string, feed: Feed): Promise<Record<Ra
       and(
         eq(radarItems.userId, userId),
         eq(radarItems.feed, feed),
+        peopleFilter(people),
         or(sql`${radarItems.status} not in ('new', 'seen')`, notPast),
       ),
     )
@@ -294,7 +313,7 @@ export async function radarNewCounts(userId: string): Promise<Record<Feed, numbe
   return out;
 }
 
-export async function radarKindCounts(userId: string, feed: Feed, view: RadarView): Promise<{ kind: string; n: number }[]> {
+export async function radarKindCounts(userId: string, feed: Feed, view: RadarView, people?: boolean): Promise<{ kind: string; n: number }[]> {
   return db
     .select({ kind: radarItems.kind, n: count() })
     .from(radarItems)
@@ -303,11 +322,33 @@ export async function radarKindCounts(userId: string, feed: Feed, view: RadarVie
         eq(radarItems.userId, userId),
         eq(radarItems.feed, feed),
         inArray(radarItems.status, VIEW_STATUSES[view]),
+        peopleFilter(people),
         view === "inbox" ? notPast : undefined,
       ),
     )
     .groupBy(radarItems.kind)
     .orderBy(desc(count()));
+}
+
+/** New people in the Sooz feed (the badge on the "People" tab). */
+export async function radarPeopleNewCount(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(radarItems)
+    .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, "sooz"), eq(radarItems.status, "new"), peopleFilter(true)));
+  return row?.n ?? 0;
+}
+
+/** Drafts ready to send (approved people) and drafts waiting for the owner's approval. */
+export async function outreachDraftCounts(userId: string): Promise<{ ready: number; waiting: number }> {
+  const { rows } = await db.$client.query<{ ready: number; waiting: number }>(
+    `select count(*) filter (where rr_is_approved(i))::int as ready,
+            count(*) filter (where not rr_is_approved(i) and i.status <> 'dismissed')::int as waiting
+       from outreach o join radar_items i on i.id = o.radar_item_id
+      where o.user_id = $1 and o.stage = 'drafted'`,
+    [userId],
+  );
+  return rows[0] ?? { ready: 0, waiting: 0 };
 }
 
 export async function recentRadarRuns(userId: string, limit = 8) {

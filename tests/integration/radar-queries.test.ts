@@ -76,11 +76,33 @@ describe.skipIf(!hasDevDb)("radar queries (runs against the Neon dev branch)", (
       expect((await one<{ status: string }>(`select status from radar_items where id = $1`, [approved]))!.status).toBe("approved");
     });
 
+    it("splits the Sooz feed into people and everything else", async () => {
+      await item("Angel P", { score: 90 });
+      await item("Buyer P", { kind: "buyer", score: 80 });
+      await item("Expo P", { kind: "event", event_date: day(5) });
+      const base = { feed: "sooz" as const, view: "inbox" as const, sort: "score" as const };
+      expect(titles(await r.listRadar(owner, { ...base, people: true }))).toEqual(["Angel P", "Buyer P"]);
+      expect(titles(await r.listRadar(owner, { ...base, people: false }))).toEqual(["Expo P"]);
+      expect(await r.radarCounts(owner, "sooz", true)).toMatchObject({ inbox: 2 });
+      expect((await r.radarKindCounts(owner, "sooz", "inbox", false)).map((k) => k.kind)).toEqual(["event"]);
+      expect(await r.radarNewCounts(owner)).toEqual({ sooz: 3, personal: 0, career: 0 });
+      expect(await r.radarPeopleNewCount(owner)).toBe(2);
+    });
+
+    it("counts drafts ready to send and drafts waiting for approval", async () => {
+      const ready = await item("Ready One");
+      await r.approveRadarItem(owner, ready);
+      await r.saveOutreachEdits(owner, ready, { body: "Hi" });
+      const waiting = await item("Waiting One", { score: 90 });
+      await q(`insert into outreach (user_id, radar_item_id, stage, body) values ($1, $2, 'drafted', 'Hi')`, [owner, waiting]);
+      expect(await r.outreachDraftCounts(owner)).toEqual({ ready: 1, waiting: 1 });
+    });
+
     it("shows a draft badge for pre-drafted finds", async () => {
       const id = await item("Drafted", { score: 90 });
       await q(`insert into outreach (user_id, radar_item_id, stage, body) values ($1, $2, 'drafted', 'Hi')`, [owner, id]);
       const [row] = await r.listRadar(owner, { feed: "sooz", view: "inbox", sort: "score" });
-      expect(row).toMatchObject({ title: "Drafted", outreachStage: "drafted", hasDraft: true });
+      expect(row).toMatchObject({ title: "Drafted", outreachStage: "drafted", hasDraft: true, draft: { subject: null, body: "Hi" } });
     });
   });
 
@@ -160,8 +182,13 @@ describe.skipIf(!hasDevDb)("radar queries (runs against the Neon dev branch)", (
       expect(rows.map((x) => x.title).sort()).toEqual(["Dismissed Thing", "Findable Angel"]);
       const { searchRecords } = await import("@/db/queries/search");
       const hits = await searchRecords(owner, "findable");
-      expect(hits).toEqual([expect.objectContaining({ label: "Findable Angel", detail: "Radar · Sooz · angel", href: "/radar?feed=sooz&q=Findable%20Angel" })]);
-      expect((await searchRecords(owner, "dismissed thing"))[0].href).toBe("/radar?feed=sooz&view=dismissed&q=Dismissed%20Thing");
+      expect(hits).toEqual([expect.objectContaining({ label: "Findable Angel", detail: "Radar · Sooz · Angel", href: "/radar?q=Findable+Angel" })]);
+      expect((await searchRecords(owner, "dismissed thing"))[0].href).toBe("/radar?view=dismissed&q=Dismissed+Thing");
+      await item("Findable Expo", { kind: "event" });
+      await item("Findable Hack", { feed: "personal", kind: "hackathon" });
+      const more = await searchRecords(owner, "findable");
+      expect(more.find((h) => h.label === "Findable Expo")?.href).toBe("/radar?tab=sooz&q=Findable+Expo");
+      expect(more.find((h) => h.label === "Findable Hack")?.href).toBe("/radar?tab=personal&q=Findable+Hack");
     });
   });
 });

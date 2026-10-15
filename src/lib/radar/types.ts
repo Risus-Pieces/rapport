@@ -77,3 +77,24 @@ export interface RadarDetails {
   check_size?: string | null;
   contact_path?: string | null;
 }
+
+/** The CRM page an approved finding lives on, or null when it is not (or no longer) in the CRM. */
+export function crmHref(item: { kind: string; contactId: string | null; dealId: string | null }): string | null {
+  const target = crmTargetFor(item.kind);
+  if (!target || !item.contactId) return null;
+  if (target === "general") return `/general/${item.contactId}`;
+  return item.dealId ? `/${target}/${item.dealId}` : null;
+}
+
+const KIND_LABELS: Record<string, string> = { nextgen: "Next-gen", media: "Press" };
+export const kindLabel = (kind: string) => KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+
+/** The /radar URL that shows a finding: the right tab, the view its status lives in, and a search for it. */
+export function radarHref(item: { feed: string; kind: string; status: string; title: string }): string {
+  const query = new URLSearchParams();
+  const tab = item.feed === "sooz" ? (isPersonKind(item.kind) ? null : "sooz") : item.feed;
+  if (tab) query.set("tab", tab);
+  if (item.status === "approved" || item.status === "dismissed" || item.status === "saved") query.set("view", item.status);
+  query.set("q", item.title);
+  return `/radar?${query.toString()}`;
+}

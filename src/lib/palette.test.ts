@@ -12,6 +12,10 @@ describe("filterPalette", () => {
     expect(actions.map((a) => a.label)).toEqual(["Add restaurant"]);
   });
 
+  it("lists the Radar page", () => {
+    expect(filterPalette("radar").pages).toEqual([{ label: "Radar", href: "/radar" }]);
+  });
+
   it("returns nothing when nothing matches", () => {
     expect(filterPalette("zzz")).toEqual({ pages: [], actions: [] });
   });

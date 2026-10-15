@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CAREER_PROFILE, PROFILES, TASKS, buildResearchPrompt } from "@/lib/radar/briefs";
-import { FEEDS, KINDS, PERSON_KINDS, crmTargetFor, defaultPurpose } from "@/lib/radar/types";
+import { FEEDS, KINDS, PERSON_KINDS, crmHref, crmTargetFor, defaultPurpose, kindLabel } from "@/lib/radar/types";
 
 describe("research tasks", () => {
   it("have unique ids and only emit kinds their feed allows", () => {
@@ -45,6 +45,17 @@ describe("CRM targets and purposes", () => {
     ]);
     expect(crmTargetFor("event")).toBeNull();
     expect(crmTargetFor("internship")).toBeNull();
+  });
+  it("links an approved finding to its CRM page, or nowhere when the record is gone", () => {
+    expect(crmHref({ kind: "angel", contactId: "c1", dealId: "d1" })).toBe("/investors/d1");
+    expect(crmHref({ kind: "buyer", contactId: "c1", dealId: "d2" })).toBe("/restaurants/d2");
+    expect(crmHref({ kind: "media", contactId: "c3", dealId: null })).toBe("/general/c3");
+    expect(crmHref({ kind: "angel", contactId: null, dealId: null })).toBeNull();
+    expect(crmHref({ kind: "angel", contactId: "c1", dealId: null })).toBeNull();
+    expect(crmHref({ kind: "event", contactId: "c1", dealId: "d1" })).toBeNull();
+  });
+  it("labels kinds for people", () => {
+    expect(["nextgen", "media", "angel", "pass"].map(kindLabel)).toEqual(["Next-gen", "Press", "Angel", "Pass"]);
   });
   it("defaults the outreach purpose from the kind", () => {
     expect(PERSON_KINDS.map((k) => defaultPurpose(k))).toEqual(["invest", "ambassador", "invest", "ambassador", "buyer", "press"]);
