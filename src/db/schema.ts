@@ -5,11 +5,14 @@ import {
   date,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
@@ -163,4 +166,140 @@ export const tasks = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("tasks_user_due_open_idx").on(t.userId, t.dueDate).where(sql`${t.doneAt} is null`)],
+);
+
+// --- Radar: research findings, outreach drafts and the owner's network -----------------------
+// Written by the weekly routines through the rr_* SQL functions (drizzle/0003_radar_functions.sql).
+
+export const radarItems = pgTable(
+  "radar_items",
+  {
+    id: pk(),
+    userId: ownerId(),
+    feed: text("feed").notNull(),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    url: text("url"),
+    source: text("source"),
+    summary: text("summary").notNull().default(""),
+    whyRelevant: text("why_relevant").notNull().default(""),
+    score: integer("score").notNull().default(50),
+    tags: tagsColumn(),
+    details: detailsColumn(),
+    eventDate: date("event_date", { mode: "string" }),
+    deadline: date("deadline", { mode: "string" }),
+    location: text("location"),
+    dedupeKey: text("dedupe_key").notNull(),
+    status: text("status").notNull().default("new"),
+    notes: text("notes").notNull().default(""),
+    taskId: text("task_id"),
+    firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+    digestedAt: timestamp("digested_at", { withTimezone: true }),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    companyId: uuid("company_id").references(() => companies.id, { onDelete: "set null" }),
+    dealId: uuid("deal_id").references(() => deals.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("radar_items_user_dedupe_idx").on(t.userId, t.dedupeKey),
+    index("radar_items_user_feed_status_idx").on(t.userId, t.feed, t.status),
+    index("radar_items_contact_idx").on(t.contactId),
+    index("radar_items_deal_idx").on(t.dealId),
+    check("radar_items_feed_check", sql`${t.feed} in ('sooz', 'personal', 'career')`),
+    check("radar_items_status_check", sql`${t.status} in ('new', 'seen', 'saved', 'dismissed', 'approved')`),
+    check("radar_items_score_check", sql`${t.score} between 0 and 100`),
+  ],
+);
+
+export const radarRuns = pgTable(
+  "radar_runs",
+  {
+    id: pk(),
+    userId: ownerId(),
+    taskId: text("task_id").notNull(),
+    feed: text("feed").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    found: integer("found").notNull().default(0),
+    inserted: integer("inserted").notNull().default(0),
+    error: text("error"),
+  },
+  (t) => [index("radar_runs_user_started_idx").on(t.userId, t.startedAt.desc())],
+);
+
+export const outreach = pgTable(
+  "outreach",
+  {
+    id: pk(),
+    userId: ownerId(),
+    radarItemId: uuid("radar_item_id")
+      .notNull()
+      .references(() => radarItems.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    dealId: uuid("deal_id").references(() => deals.id, { onDelete: "set null" }),
+    purpose: text("purpose").notNull().default("invest"),
+    stage: text("stage").notNull().default("prospect"),
+    email: text("email"),
+    emailSource: text("email_source"),
+    linkedinUrl: text("linkedin_url"),
+    warmPath: text("warm_path"),
+    subject: text("subject"),
+    body: text("body"),
+    linkedinNote: text("linkedin_note"),
+    introRequest: text("intro_request"),
+    followup1: text("followup_1"),
+    followup2: text("followup_2"),
+    draftedBy: text("drafted_by"),
+    draftedAt: timestamp("drafted_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    lastTouchAt: timestamp("last_touch_at", { withTimezone: true }),
+    nextFollowupAt: date("next_followup_at", { mode: "string" }),
+    touches: integer("touches").notNull().default(0),
+    repliedAt: timestamp("replied_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("outreach_radar_item_idx").on(t.radarItemId),
+    index("outreach_user_stage_idx").on(t.userId, t.stage),
+    index("outreach_contact_idx").on(t.contactId),
+    index("outreach_deal_idx").on(t.dealId),
+    check("outreach_purpose_check", sql`${t.purpose} in ('invest', 'ambassador', 'buyer', 'press', 'intro')`),
+    check("outreach_stage_check", sql`${t.stage} in ('prospect', 'drafted', 'sent', 'replied', 'closed')`),
+  ],
+);
+
+// The owner's LinkedIn connections, for warm-intro matching.
+export const network = pgTable(
+  "network",
+  {
+    id: pk(),
+    userId: ownerId(),
+    fullName: text("full_name").notNull(),
+    company: text("company"),
+    position: text("position"),
+    linkedinUrl: text("linkedin_url"),
+    email: text("email"),
+    connectedOn: date("connected_on", { mode: "string" }),
+    source: text("source").notNull().default("linkedin"),
+    companyKey: text("company_key"),
+    dedupeKey: text("dedupe_key").notNull(),
+  },
+  (t) => [
+    uniqueIndex("network_user_dedupe_idx").on(t.userId, t.dedupeKey),
+    index("network_user_company_key_idx").on(t.userId, t.companyKey),
+  ],
+);
+
+export const appSettings = pgTable(
+  "app_settings",
+  {
+    userId: ownerId(),
+    key: text("key").notNull(),
+    value: text("value").notNull().default(""),
+    updatedAt: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.key] })],
 );
