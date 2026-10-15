@@ -20,7 +20,7 @@ import { formatCents } from "@/lib/money";
 import { deletionSummary } from "@/lib/delete-summary";
 import { FIRM_TYPE_LABELS, getStage, INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
-import { getOutreachFor } from "@/db/queries/radar";
+import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 
@@ -63,7 +63,7 @@ export async function DealDetail({ section, id, outreachError }: { section: Pipe
       : deal.contactId
         ? getContactDeleteImpact(userId, deal.contactId).then((i) => ({ ...i, contacts: 0 }))
         : Promise.resolve({ activities: 0, deals: 0, tasks: 0, contacts: 0 }),
-    getOutreachFor(userId, { dealId: deal.id }),
+    listOutreachFor(userId, { dealId: deal.id }),
   ]);
   const summary = `${deletionSummary(impact).replace("this contact", "this record")}${impact.contacts > 0 ? ` ${impact.contacts} ${impact.contacts === 1 ? "person stays" : "people stay"} but lose the link to this company.` : ""}`;
 
@@ -90,7 +90,20 @@ export async function DealDetail({ section, id, outreachError }: { section: Pipe
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          {outreach ? <OutreachPanel userId={userId} outreach={outreach} back={`/${section}/${deal.id}`} error={outreachError} /> : null}
+          {outreach.length ? (
+            <div id="outreach" className="scroll-mt-6 space-y-6">
+              {outreach.map((o, i) => (
+                <OutreachPanel
+                  key={o.id}
+                  userId={userId}
+                  outreach={o}
+                  back={`/${section}/${deal.id}`}
+                  error={i === 0 ? outreachError : undefined}
+                  showName={outreach.length > 1}
+                />
+              ))}
+            </div>
+          ) : null}
           <Card className="gap-4 p-5">
             <h2 className="font-medium">Next step</h2>
             {deal.nextStep ? (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CAREER_PROFILE, PROFILES, TASKS, buildResearchPrompt } from "@/lib/radar/briefs";
-import { FEEDS, KINDS, PERSON_KINDS, crmHref, crmTargetFor, defaultPurpose, kindLabel } from "@/lib/radar/types";
+import { FEEDS, KINDS, PERSON_KINDS, crmHref, crmTargetFor, defaultPurpose, kindLabel, outreachResultMessage } from "@/lib/radar/types";
 
 describe("research tasks", () => {
   it("have unique ids and only emit kinds their feed allows", () => {
@@ -53,6 +53,12 @@ describe("CRM targets and purposes", () => {
     expect(crmHref({ kind: "angel", contactId: null, dealId: null })).toBeNull();
     expect(crmHref({ kind: "angel", contactId: "c1", dealId: null })).toBeNull();
     expect(crmHref({ kind: "event", contactId: "c1", dealId: "d1" })).toBeNull();
+  });
+  it("explains an outreach button that did nothing", () => {
+    expect(outreachResultMessage("ok")).toBeNull();
+    expect(outreachResultMessage("ignored")).toBeNull();
+    expect(outreachResultMessage("not approved")).toBe("That person is no longer in the CRM. Approve them again from the Radar.");
+    expect(outreachResultMessage("not found")).toBe("That outreach no longer exists.");
   });
   it("labels kinds for people", () => {
     expect(["nextgen", "media", "angel", "pass"].map(kindLabel)).toEqual(["Next-gen", "Press", "Angel", "Pass"]);

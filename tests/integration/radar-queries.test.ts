@@ -57,8 +57,16 @@ describe.skipIf(!hasDevDb)("radar queries (runs against the Neon dev branch)", (
       expect(titles(await r.listRadar(owner, { ...base, q: "angel b" }))).toEqual(["Angel B"]);
       expect(titles(await r.listRadar(owner, { ...base, view: "approved" }))).toEqual(["In CRM"]);
       expect(await r.radarCounts(owner, "sooz")).toEqual({ inbox: 3, saved: 1, approved: 1, dismissed: 0 });
-      expect(await r.radarNewCounts(owner)).toEqual({ sooz: 4, personal: 1, career: 0 });
+      expect(await r.radarNewCounts(owner)).toEqual({ sooz: 3, personal: 1, career: 0 }); // "Expo Past" is new but past
       expect(await r.radarKindCounts(owner, "sooz", "inbox")).toEqual(expect.arrayContaining([{ kind: "angel", n: 2 }, { kind: "event", n: 1 }]));
+    });
+
+    it("new counts leave out past-dated items, like the inbox does", async () => {
+      await item("Past New", { kind: "event", event_date: day(-2) });
+      await item("Future New", { kind: "event", event_date: day(2) });
+      await item("Undated Angel");
+      expect(await r.radarNewCounts(owner)).toEqual({ sooz: 2, personal: 0, career: 0 });
+      expect(await r.radarPeopleNewCount(owner)).toBe(1);
     });
 
     it("never lets a status change undo an approval; notes and see-all work", async () => {
@@ -155,6 +163,26 @@ describe.skipIf(!hasDevDb)("radar queries (runs against the Neon dev branch)", (
       const o = await r.getOutreachFor(owner, { dealId: res.dealId! });
       expect(o).toMatchObject({ radarItemId: id, purpose: "invest", stage: "prospect", name: "Panel Person" });
       expect(await r.getOutreachFor(owner, { contactId: res.contactId })).toMatchObject({ radarItemId: id });
+    });
+
+    it("lists every person's thread on a shared deal, and only people still in the CRM", async () => {
+      const a = await item("Shared Buyer A", { kind: "buyer", firm: "Shared Store" });
+      const b = await item("Shared Buyer B", { kind: "buyer", firm: "Shared Store" });
+      const ra = await r.approveRadarItem(owner, a);
+      const rb = await r.approveRadarItem(owner, b);
+      expect(rb.dealId).toBe(ra.dealId);
+      expect((await r.listOutreachFor(owner, { dealId: ra.dealId! })).map((o) => o.name).sort()).toEqual(["Shared Buyer A", "Shared Buyer B"]);
+      await q(`delete from contacts where id = $1`, [rb.contactId]);
+      expect((await r.listOutreachFor(owner, { dealId: ra.dealId! })).map((o) => o.name)).toEqual(["Shared Buyer A"]);
+      expect((await r.listOutreachFor(owner, { contactId: ra.contactId })).map((o) => o.name)).toEqual(["Shared Buyer A"]);
+    });
+
+    it("clearing the draft body takes the thread back to needing a draft", async () => {
+      const id = await item("Clear Person");
+      await r.approveRadarItem(owner, id);
+      await r.saveOutreachEdits(owner, id, { subject: "Hi", body: "Hello" });
+      expect(await r.saveOutreachEdits(owner, id, { subject: "Hi", body: "" })).toEqual({ ok: true });
+      expect(await r.getOutreachForItem(owner, id)).toMatchObject({ stage: "prospect", body: null });
     });
 
     it("edits drafts with validation, changes purpose, and records sends through the shared SQL", async () => {

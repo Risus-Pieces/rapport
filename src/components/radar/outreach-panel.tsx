@@ -60,7 +60,19 @@ function Field({ label, name, value, rows, wide = true, maxLength }: { label: st
 }
 
 /** Drafts, purpose and send tracking for one person, on their deal or contact page. Nothing is ever sent from here. */
-export async function OutreachPanel({ userId, outreach: o, back, error }: { userId: string; outreach: OutreachRow; back: string; error?: string }) {
+export async function OutreachPanel({
+  userId,
+  outreach: o,
+  back,
+  error,
+  showName = false,
+}: {
+  userId: string;
+  outreach: OutreachRow;
+  back: string;
+  error?: string;
+  showName?: boolean;
+}) {
   const [pitch, warm] = await Promise.all([getPitch(userId), warmMatches(userId, [o.radarItemId])]);
   const today = todayString();
   const from = pitch["pitch.sender_email"] || null;
@@ -71,9 +83,9 @@ export async function OutreachPanel({ userId, outreach: o, back, error }: { user
   const known = (warm.get(o.radarItemId) ?? []).filter((w) => w.kind === "same_company");
 
   return (
-    <Card id="outreach" className="scroll-mt-6 gap-4 p-5">
+    <Card className="gap-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-medium">Outreach</h2>
+        <h2 className="font-medium">{showName ? `Outreach · ${o.name}` : "Outreach"}</h2>
         <div className="flex flex-wrap gap-1.5">
           <Badge variant="secondary">{PURPOSE_LABELS[o.purpose as Purpose] ?? o.purpose}</Badge>
           <Badge variant="outline">{due ? "Follow-up due" : (STAGE_LABELS[o.stage] ?? o.stage)}</Badge>

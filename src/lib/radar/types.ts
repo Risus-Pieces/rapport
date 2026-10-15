@@ -98,3 +98,10 @@ export function radarHref(item: { feed: string; kind: string; status: string; ti
   query.set("q", item.title);
   return `/radar?${query.toString()}`;
 }
+
+/** What to tell the owner when an outreach button had no effect (null when there is nothing to say). */
+export function outreachResultMessage(result: string): string | null {
+  if (result === "not approved") return "That person is no longer in the CRM. Approve them again from the Radar.";
+  if (result === "not found") return "That outreach no longer exists.";
+  return null;
+}

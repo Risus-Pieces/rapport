@@ -7,6 +7,7 @@ import { EMAIL_RE, LINKEDIN_RE, companyKey, parseProspectCsv, type Connection } 
 import {
   FEEDS,
   PERSON_KINDS,
+  crmHref,
   crmTargetFor,
   defaultPurpose,
   isPurpose,
@@ -31,7 +32,8 @@ export type Approval = {
 };
 
 function approval(section: CrmTarget, contactId: string, companyId: string | null, dealId: string | null): Approval {
-  const href = section === "general" || !dealId ? `/general/${contactId}` : `/${section}/${dealId}`;
+  if (section !== "general" && !dealId) throw new RadarError("That record has no pipeline card.");
+  const href = section === "general" ? `/general/${contactId}` : `/${section}/${dealId}`;
   return { section, contactId, companyId, dealId, href };
 }
 
@@ -79,7 +81,9 @@ export async function approveRadarItem(userId: string, itemId: string): Promise<
     if (!item) throw new RadarError("That finding no longer exists.");
     const section = item.feed === "sooz" ? crmTargetFor(item.kind) : null;
     if (!section) throw new RadarError("Only people can be added to the CRM.");
-    if (item.status === "approved" && item.contactId) {
+    // Still in the CRM: nothing to do. If its contact or pipeline card was deleted since, approve again
+    // (an orphaned contact is found by name and reused).
+    if (item.status === "approved" && item.contactId && crmHref(item)) {
       return approval(section, item.contactId, item.companyId, item.dealId);
     }
 
@@ -129,6 +133,13 @@ export async function approveRadarItem(userId: string, itemId: string): Promise<
       companyId =
         company?.id ??
         (await tx.insert(companies).values({ userId, section, name: companyName }).returning({ id: companies.id }))[0].id;
+      if (contactId) {
+        // A buyer whose restaurant was deleted keeps the contact without a company: re-attach it.
+        await tx
+          .update(contacts)
+          .set({ companyId })
+          .where(and(eq(contacts.id, contactId), isNull(contacts.companyId)));
+      }
       contactId ??= (
         await tx
           .insert(contacts)
@@ -306,7 +317,7 @@ export async function radarNewCounts(userId: string): Promise<Record<Feed, numbe
   const rows = await db
     .select({ feed: radarItems.feed, n: count() })
     .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.status, "new")))
+    .where(and(eq(radarItems.userId, userId), eq(radarItems.status, "new"), notPast))
     .groupBy(radarItems.feed);
   const out = Object.fromEntries(FEEDS.map((f) => [f, 0])) as Record<Feed, number>;
   for (const r of rows) if (r.feed in out) out[r.feed as Feed] = r.n;
@@ -335,7 +346,7 @@ export async function radarPeopleNewCount(userId: string): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, "sooz"), eq(radarItems.status, "new"), peopleFilter(true)));
+    .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, "sooz"), eq(radarItems.status, "new"), peopleFilter(true), notPast));
   return row?.n ?? 0;
 }
 
@@ -538,10 +549,13 @@ export async function getOutreachForItem(userId: string, itemId: string): Promis
   return row ? toOutreachRow(row) : null;
 }
 
-/** The outreach thread attached to a deal (or a General contact), most recently touched first. */
-export async function getOutreachFor(userId: string, where: { contactId?: string; dealId?: string }): Promise<OutreachRow | null> {
-  if (!where.contactId && !where.dealId) return null;
-  const [row] = await db
+/**
+ * Every outreach thread on a deal (several buyers can share one restaurant) or a contact, for people
+ * still in the CRM, in the order they were added.
+ */
+export async function listOutreachFor(userId: string, where: { contactId?: string; dealId?: string }): Promise<OutreachRow[]> {
+  if (!where.contactId && !where.dealId) return [];
+  const rows = await db
     .select(outreachSelect)
     .from(outreach)
     .innerJoin(radarItems, eq(radarItems.id, outreach.radarItemId))
@@ -549,11 +563,16 @@ export async function getOutreachFor(userId: string, where: { contactId?: string
       and(
         eq(outreach.userId, userId),
         where.dealId ? eq(outreach.dealId, where.dealId) : eq(outreach.contactId, where.contactId!),
+        eq(radarItems.status, "approved"),
+        sql`${radarItems.contactId} is not null`,
       ),
     )
-    .orderBy(desc(outreach.updatedAt), asc(outreach.id))
-    .limit(1);
-  return row ? toOutreachRow(row) : null;
+    .orderBy(asc(outreach.createdAt), asc(outreach.id));
+  return rows.map(toOutreachRow);
+}
+
+export async function getOutreachFor(userId: string, where: { contactId?: string; dealId?: string }): Promise<OutreachRow | null> {
+  return (await listOutreachFor(userId, where))[0] ?? null;
 }
 
 export type DraftEdit = {
@@ -580,7 +599,10 @@ export async function saveOutreachEdits(userId: string, itemId: string, e: Draft
   const clip = (v: string | undefined, n: number) => (v === undefined ? undefined : v.trim().slice(0, n) || null);
   const body = clip(e.body, 3000) ?? null;
   const lowered = email?.toLowerCase() ?? null;
-  await db
+  const stage = body
+    ? current.stage === "prospect" ? "drafted" : current.stage
+    : current.stage === "drafted" ? "prospect" : current.stage;
+  const updated = await db
     .update(outreach)
     .set({
       email: lowered,
@@ -593,11 +615,14 @@ export async function saveOutreachEdits(userId: string, itemId: string, e: Draft
       introRequest: clip(e.intro_request, 2000) ?? null,
       followup1: clip(e.followup_1, 1500) ?? null,
       followup2: clip(e.followup_2, 1500) ?? null,
-      stage: current.stage === "prospect" && body ? "drafted" : current.stage,
+      stage,
       draftedBy: current.draftedBy ?? (body ? draftedBy : null),
       draftedAt: current.draftedAt ?? (body ? new Date() : null),
     })
-    .where(eq(outreach.id, current.id));
+    // Guarded again on write: a send detected in Gmail meanwhile must not be undone by this save.
+    .where(and(eq(outreach.id, current.id), inArray(outreach.stage, ["prospect", "drafted"])))
+    .returning({ id: outreach.id });
+  if (updated.length === 0) return { ok: false, error: "Drafts are frozen once sent." };
   if (current.contactId && (lowered || li)) {
     await db
       .update(contacts)

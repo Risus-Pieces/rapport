@@ -3,7 +3,8 @@
 --   create role radar_routine login password '<random>';
 -- It gets EXECUTE on the routine-facing rr_* functions only. They are SECURITY DEFINER, so they reach
 -- the tables; the role itself cannot. rr_outreach_record stays app-only (routines use rr_outreach_observe).
--- Safe to re-run; does nothing on a branch without the role.
+-- Safe to re-run; does nothing on a branch without the role. Create the role BEFORE migrating a new branch;
+-- if it was created afterwards, re-run this file's do-block by hand (drizzle will not run it again).
 do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'radar_routine') then

@@ -17,7 +17,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { formatDay, todayString } from "@/lib/dates";
 import { describeLastTouch } from "@/lib/reminders";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
-import { getOutreachFor } from "@/db/queries/radar";
+import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 import { archiveContactAction } from "../actions";
@@ -57,7 +57,7 @@ export default async function ContactPage({
     listContactActivities(session.user.id, contact.id),
     listOpenTasks(session.user.id, { contactId: contact.id }),
     listDoneTasks(session.user.id, { contactId: contact.id, limit: 5 }),
-    getOutreachFor(session.user.id, { contactId: contact.id }),
+    listOutreachFor(session.user.id, { contactId: contact.id }),
   ]);
   const today = todayString();
   const archived = contact.archivedAt !== null;
@@ -93,13 +93,19 @@ export default async function ContactPage({
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          {outreach ? (
-            <OutreachPanel
-              userId={session.user.id}
-              outreach={outreach}
-              back={`/general/${contact.id}`}
-              error={typeof outreachError === "string" ? outreachError : undefined}
-            />
+          {outreach.length ? (
+            <div id="outreach" className="scroll-mt-6 space-y-6">
+              {outreach.map((o, i) => (
+                <OutreachPanel
+                  key={o.id}
+                  userId={session.user.id}
+                  outreach={o}
+                  back={`/general/${contact.id}`}
+                  error={i === 0 && typeof outreachError === "string" ? outreachError : undefined}
+                  showName={outreach.length > 1}
+                />
+              ))}
+            </div>
           ) : null}
           <Card className="gap-4 p-5">
             <h2 className="font-medium">Stay in touch</h2>

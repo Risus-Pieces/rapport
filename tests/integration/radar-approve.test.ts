@@ -136,6 +136,22 @@ describe.skipIf(!hasDevDb)("approving radar findings into the CRM (runs against 
     expect(await contactsNamed("Gone Person")).toHaveLength(1);
   });
 
+  it("re-approving after the restaurant was deleted rebuilds the company and deal instead of 404ing", async () => {
+    const id = await item("Reb Buyer", { kind: "buyer", firm: "Store Co" });
+    const first = await r.approveRadarItem(owner, id);
+    const { deleteCompany } = await import("@/db/queries/companies");
+    await deleteCompany(owner, first.companyId!);
+    expect(await one(`select status, contact_id is not null as has_contact, deal_id, company_id from radar_items where id = $1`, [id])).toEqual({
+      status: "approved", has_contact: true, deal_id: null, company_id: null,
+    });
+    const again = await r.approveRadarItem(owner, id);
+    expect(again.contactId).toBe(first.contactId);
+    expect(again.dealId).not.toBeNull();
+    expect(again.dealId).not.toBe(first.dealId);
+    expect(again.href).toBe(`/restaurants/${again.dealId}`);
+    expect(await one(`select stage from deals where id = $1`, [again.dealId])).toEqual({ stage: "lead" });
+  });
+
   it("refuses non-people, other feeds, other owners' items and missing items", async () => {
     await expect(r.approveRadarItem(owner, await item("Expo", { kind: "event" }))).rejects.toThrow(r.RadarError);
     await expect(r.approveRadarItem(owner, await item("Intern Person", { feed: "career", kind: "internship" }))).rejects.toThrow(r.RadarError);

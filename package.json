@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "seed:owner": "tsx --env-file=.env.local scripts/seed-owner.ts",
     "reset:owner-password": "tsx --env-file=.env.local scripts/reset-owner-password.ts",
-    "routine-prompt": "tsx scripts/routine-prompt.ts"
+    "routine-prompt": "tsx scripts/routine-prompt.ts",
+    "import:query": "tsx --env-file=.env.local scripts/import-query.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

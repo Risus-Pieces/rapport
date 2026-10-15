@@ -15,6 +15,7 @@ import {
 } from "@/db/queries/radar";
 import { PITCH_FIELDS, templateDrafts, type Pitch, type PitchKey } from "@/lib/radar/drafts";
 import { parseLinkedInConnections, type Connection } from "@/lib/radar/import";
+import { outreachResultMessage } from "@/lib/radar/types";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
 
@@ -97,9 +98,9 @@ export async function outreachEventAction(formData: FormData) {
   const id = itemId(formData);
   const event = str(formData, "event") as OutreachEvent;
   if (!id || !EVENTS.includes(event)) return;
-  await recordOutreach(session.user.id, id, event);
+  const message = outreachResultMessage(await recordOutreach(session.user.id, id, event));
   revalidatePath("/", "layout");
-  redirect(backTo(formData));
+  redirect(backTo(formData, message ? { outreachError: message } : undefined));
 }
 
 // --- Settings ----------------------------------------------------------------------------------
