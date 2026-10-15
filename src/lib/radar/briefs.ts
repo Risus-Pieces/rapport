@@ -1,4 +1,4 @@
-import { PERSON_KINDS, type Feed } from "./types";
+import type { Feed } from "./types";
 
 /**
  * Research tasks. Each task is one focused agent run (search -> notes -> structured extraction).
