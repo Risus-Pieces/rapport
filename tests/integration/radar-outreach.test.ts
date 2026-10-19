@@ -36,7 +36,10 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
     await q(`update radar_items set contact_id = $2, deal_id = $3 where id = $1`, [id, contact, deal]);
     return { id, contact, deal };
   };
-  const queue = async (min = 75) => (await one<{ n: number }>(`select rr_outreach_queue($1, $2) as n`, [min, owner]))!.n;
+  const queue = async () => (await one<{ n: number }>(`select rr_outreach_queue($1) as n`, [owner]))!.n;
+  // Put unapproved people on this week's shortlist (the only way they get outreach rows now).
+  const shortlistIt = (...ids: string[]) =>
+    one(`select rr_shortlist_set($1::jsonb, $2)`, [JSON.stringify(ids.map((id, i) => ({ radar_item_id: id, rank: i + 1, ask: `ask ${i + 1}` }))), owner]);
   const todo = async (limit = 10) => (await one<{ t: { pitch: Record<string, string>; prospects: Record<string, unknown>[] } }>(
     `select rr_outreach_todo($1, $2) as t`, [limit, owner]))!.t;
   const save = async (itemId: string, p: unknown) => (await one<{ r: Record<string, unknown> }>(
@@ -72,25 +75,28 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
   });
 
   describe("queue and todo", () => {
-    it("queues approved people at any score and unapproved people at 75+, never dismissed or non-people", async () => {
+    it("queues approved people and this week's shortlist only, never strong finds that weren't shortlisted", async () => {
       await approved("Low Approved", "target", { score: 50 });
+      await shortlistIt(await item("Short Pick", { score: 65 }));
       await item("Strong Find", { score: 90, kind: "celebrity" });
       await item("Weak Find", { score: 60 });
       await item("Dismissed Find", { score: 95, status: "dismissed" });
       await item("An Event", { score: 99, kind: "event" });
       await item("Career Person", { score: 99, feed: "career", kind: "internship" });
-      expect(await queue()).toBe(2);
+      expect(await queue()).toBe(1); // the shortlist already opened Short Pick's row
       expect(await queue()).toBe(0);
       const t = await todo();
       expect(t.prospects.map((p) => [p.name, p.approved, p.purpose, p.kind])).toEqual([
+        ["Short Pick", false, "invest", "angel"],
         ["Low Approved", true, "invest", "angel"],
-        ["Strong Find", false, "ambassador", "celebrity"],
       ]);
     });
 
     it("hands out one person per firm and carries pitch facts and warm paths", async () => {
-      await item("Ann Top", { score: 90, firm: "The Angel Group; Supernatural Ventures" });
-      await item("Ben Next", { score: 85, firm: "The Angel Group" });
+      await shortlistIt(
+        await item("Ann Top", { score: 90, firm: "The Angel Group; Supernatural Ventures" }),
+        await item("Ben Next", { score: 85, firm: "The Angel Group" }),
+      );
       await q(`insert into app_settings (user_id, key, value) values ($1, 'pitch.company', 'Sooz')`, [owner]);
       await q(`insert into network (user_id, full_name, company, position, company_key, dedupe_key)
                values ($1, 'Sam Lee', 'Supernatural Ventures', 'Associate', 'supernatural ventures', 'n1')`, [owner]);
@@ -98,7 +104,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       const t = await todo();
       expect(t.pitch).toEqual({ "pitch.company": "Sooz" });
       expect(t.prospects.map((p) => p.name)).toEqual(["Ann Top"]);
-      expect(t.prospects[0].network_matches).toEqual([{ name: "Sam Lee", company: "Supernatural Ventures", position: "Associate" }]);
+      expect(t.prospects[0].network_matches).toEqual([{ name: "Sam Lee", via: "LinkedIn connection" }]);
     });
   });
 
@@ -120,6 +126,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
 
     it("pre-drafts unapproved people without touching any contact", async () => {
       const id = await item("Pre Draft", { score: 90 });
+      await shortlistIt(id);
       await queue();
       expect((await save(id, { body: "Hi", email: "pre@fund.vc" })).draft_saved).toBe(true);
       expect(await outreachOf(id)).toMatchObject({ stage: "drafted", email: "pre@fund.vc" });
@@ -183,6 +190,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
 
     it("refuses unapproved items and unknown events", async () => {
       const id = await item("Not Yet", { score: 90 });
+      await shortlistIt(id);
       await queue();
       expect(await record(id, "sent")).toBe("not approved");
       expect(await record(randomUUID(), "sent")).toBe("not found");
@@ -196,6 +204,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
     it("watches approved people with an email only, and observe ignores the rest", async () => {
       const a = await approved("Watch Me");
       const pre = await item("Pre Watch", { score: 90 });
+      await shortlistIt(pre);
       await queue();
       await save(a.id, { email: "watch@fund.vc", body: "Hi" });
       await save(pre, { email: "pre@fund.vc", body: "Hi" });
@@ -218,6 +227,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       await item("Gone", { status: "dismissed" });
       const a = await approved("Ready Draft");
       const pre = await item("Waiting Draft", { score: 90, status: "seen" });
+      await shortlistIt(pre);
       await queue();
       await save(a.id, { body: "Hi" });
       await save(pre, { body: "Hi" });
