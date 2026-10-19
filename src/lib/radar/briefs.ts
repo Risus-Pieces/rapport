@@ -199,7 +199,8 @@ management. Score higher for beverage deals, Houston ties and engaged mid-size a
     upcomingOnly: true,
     maxSearches: 12,
     brief: `Find (1) beverage buyers and category managers at H-E-B, Whole Foods Market (Southwest region), Central Market,
-Kroger (Houston division), Buc-ee's, Sprouts, and specialty grocers and cafés in Houston/Texas, plus Texas beverage
+Kroger (Houston division), Buc-ee's, Sprouts, and Houston cafés, coffee shops and specialty stores that stock local
+drinks (owners and managers; before launch their interest is proof for investors), plus Texas beverage
 distributor and broker principals (kind "buyer", one person per item, as named in trade press, retailer announcements,
 conference speaker lists or company pages); and (2) buyer pitch days, ECRM sessions, retailer open calls and local-product
 programs (kind "event", only if they have not happened yet; include the date or application deadline). ${PEOPLE_RULES}
