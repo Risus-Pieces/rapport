@@ -19,20 +19,38 @@ creators and college athletes, retail buyers, press), **Sooz** (events, sampling
 - **Settings** holds your pitch facts (the only facts drafts use), LinkedIn connections (warm paths), a people CSV
   import into the Radar, and a Radar CSV export.
 
+### Raise mode (This week)
+
+The **This week** page runs the $75k pre-seed raise like a small sales team, about 30 minutes a week:
+
+- **Monday shortlist**: about 4 investors and 2 buyers or cafés, each with a reason, the specific ask and a written
+  draft. Check the ones you want and press *Approve selected*; they go into the CRM and their drafts land in your
+  **Gmail Drafts** the next morning (nothing is ever sent for you). Unchecked people are skipped for 8 weeks.
+  Candidates include Radar finds, investors you added to the CRM by hand, and anyone your General contacts can
+  introduce.
+- **First notes are advice asks** and never mention the round. After a real conversation, press **Advice call done**
+  on the investor's deal: only those people get the monthly update and, when you press *We launched: start the
+  raise*, the launch ask.
+- **Progress bar** (also on Investors): committed (won deals) and soft-circled (open deals at Follow-up or Term
+  sheet with an amount) against the target; set the target and launch date on This week.
+- **This month**: three short facts for the monthly update. If they haven't changed since the last update, no update
+  goes out. A nudge appears when your traction fact is older than two weeks.
+
 ### Routines
 
-Five Claude desktop scheduled tasks run on the owner's Mac (they read `routines/*.md` from this folder at run time):
+Six Claude desktop scheduled tasks run on the owner's Mac (they read `routines/*.md` from this folder at run time):
 
 | Task | When (Central) | Does |
 |---|---|---|
 | Sooz research | Mon ~8:00 | every `sooz-*` task in `src/lib/radar/briefs.ts` → `rr_ingest()` |
-| Outreach prep | Mon ~9:15 | queues approved people and strong (75+) finds, enriches public contacts (≤5 Apollo lookups), drafts per purpose, watches Gmail for sends/replies to approved people |
+| Outreach prep | Mon ~9:15 | builds the weekly shortlist (4 investors + 2 buyers), enriches public contacts (≤5 Apollo lookups), drafts per purpose, writes monthly updates and launch asks when due |
+| Gmail drafts | daily ~7:45 | puts approved drafts and due follow-ups into Gmail Drafts (never sends) and notices sends and replies |
 | Digest | Mon ~10:30 | `rr_digest_email()` → one email to the owner → `rr_mark_digested()` |
 | Personal & Career research | Thu ~8:00 | every `personal-*` and `career-*` task |
 | Digest | Thu ~10:30 | same digest |
 
 Regenerate the prompts after editing briefs: `npm run routine-prompt -- research sooz` (or `personal,career`,
-`outreach`, `digest`) > `routines/<file>.md`.
+`outreach`, `gmail`, `digest`) > `routines/<file>.md`.
 
 **Database access for routines.** Routines connect through the Neon connector as `radar_routine`, a role that can only
 execute the `rr_*` functions (`drizzle/0003`–`0005`); it cannot read contacts, deals or auth tables. Create it in SQL,
