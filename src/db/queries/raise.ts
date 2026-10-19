@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appSettings, deals, outreach, radarItems, shortlist } from "@/db/schema";
+import { appSettings, deals, outreach, outreachMessages as messages, radarItems, shortlist } from "@/db/schema";
 import { crmHref, type RadarDetails } from "@/lib/radar/types";
 import { DEFAULT_RAISE, isStale, parseRaiseForm, type RaiseSettings } from "@/lib/raise";
 import { approveRadarItem } from "./radar";
@@ -252,4 +252,33 @@ export async function weekSummary(userId: string, now: Date = new Date()): Promi
       monthFactsStale: phase === "building" && ["no facts", "facts not updated"].includes(update.rows[0]?.t.reason ?? ""),
     },
   };
+}
+
+/** Allow one person's drafts into Gmail Drafts (only for people in the CRM). */
+export async function setGmailOk(userId: string, itemId: string): Promise<boolean> {
+  const { rows } = await db.$client.query(
+    `update outreach o set gmail_ok = true, updated_at = now()
+       from radar_items i
+      where i.id = o.radar_item_id and o.user_id = $1 and o.radar_item_id = $2 and rr_is_approved(i)
+      returning o.id`,
+    [userId, itemId],
+  );
+  return rows.length > 0;
+}
+
+export type OutreachMessage = { kind: string; period: string; status: string; subject: string | null; pushedAt: Date | null; sentAt: Date | null };
+
+export async function outreachMessages(userId: string, outreachId: string): Promise<OutreachMessage[]> {
+  return db
+    .select({
+      kind: messages.kind,
+      period: messages.period,
+      status: messages.status,
+      subject: messages.subject,
+      pushedAt: messages.pushedAt,
+      sentAt: messages.sentAt,
+    })
+    .from(messages)
+    .where(and(eq(messages.userId, userId), eq(messages.outreachId, outreachId)))
+    .orderBy(asc(messages.createdAt));
 }

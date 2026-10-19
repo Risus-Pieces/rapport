@@ -69,6 +69,23 @@ describe.skipIf(!hasDevDb)("raise settings, advice calls, progress and the week 
     expect(await raise.raiseProgress(owner)).toEqual({ target: 75000, committed: 25000, softCircled: 15000, ready: 2 });
   });
 
+  it("lets the owner send one person's draft to Gmail, and lists that person's Gmail messages", async () => {
+    const { approveRadarItem } = await import("@/db/queries/radar");
+    const item = (await one<{ id: string }>(
+      `insert into radar_items (user_id, feed, kind, title, url, score, dedupe_key) values ($1, 'sooz', 'angel', 'Gail Gmail', 'https://x.com/g', 80, 'gg') returning id`, [owner]))!.id;
+    const loose = (await one<{ id: string }>(
+      `insert into radar_items (user_id, feed, kind, title, url, score, dedupe_key) values ($1, 'sooz', 'angel', 'Not In CRM', 'https://x.com/n', 80, 'nn') returning id`, [owner]))!.id;
+    await q(`insert into outreach (user_id, radar_item_id) values ($1, $2)`, [owner, loose]);
+    expect(await raise.setGmailOk(owner, loose)).toBe(false);
+    await approveRadarItem(owner, item);
+    expect(await raise.setGmailOk(owner, item)).toBe(true);
+    const oid = (await one<{ id: string; gmail_ok: boolean }>(`select id, gmail_ok from outreach where radar_item_id = $1`, [item]))!;
+    expect(oid.gmail_ok).toBe(true);
+    await q(`insert into outreach_messages (user_id, outreach_id, kind, status) values ($1, $2, 'first', 'in_gmail')`, [owner, oid.id]);
+    expect((await raise.outreachMessages(owner, oid.id)).map((m) => [m.kind, m.status])).toEqual([["first", "in_gmail"]]);
+    expect(await raise.outreachMessages(randomUUID(), oid.id)).toEqual([]);
+  });
+
   it("collects the week: applications due within 30 days, replies, and nudges", async () => {
     await q(`insert into radar_items (user_id, feed, kind, title, url, score, status, deadline, dedupe_key) values
       ($1, 'sooz', 'funding', 'Pitch Prize', 'https://x.com/p', 80, 'saved', $2, 'a1'),

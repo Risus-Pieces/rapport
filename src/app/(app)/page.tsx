@@ -112,9 +112,14 @@ export default async function HomePage() {
         <Card className="gap-3 p-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-base font-medium">Radar</h2>
-            <Link href="/radar" className="text-sm text-primary hover:underline">
-              Open Radar
-            </Link>
+            <span className="flex gap-4">
+              <Link href="/week" className="text-sm text-primary hover:underline">
+                This week
+              </Link>
+              <Link href="/radar" className="text-sm text-primary hover:underline">
+                Open Radar
+              </Link>
+            </span>
           </div>
           {radarLinks.length === 0 && drafts.ready === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing new. Research runs Mondays (Sooz) and Thursdays (Personal and Career).</p>

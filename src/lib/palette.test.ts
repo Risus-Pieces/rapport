@@ -12,6 +12,10 @@ describe("filterPalette", () => {
     expect(actions.map((a) => a.label)).toEqual(["Add restaurant"]);
   });
 
+  it("lists the This week page", () => {
+    expect(filterPalette("this week").pages).toEqual([{ label: "This week", href: "/week" }]);
+  });
+
   it("lists the Radar page", () => {
     expect(filterPalette("radar").pages).toEqual([{ label: "Radar", href: "/radar" }]);
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRIMARY_NAV, SECONDARY_NAV, SECTION_STYLES, isActivePath, type SectionAccent } from "./nav";
+import { MOBILE_NAV, PRIMARY_NAV, SECONDARY_NAV, SECTION_STYLES, isActivePath, type SectionAccent } from "./nav";
 
 describe("isActivePath", () => {
   it("matches Home only on the exact root path", () => {
@@ -25,8 +25,12 @@ describe("nav config", () => {
     expect(hrefs.every((href) => href.startsWith("/"))).toBe(true);
   });
 
-  it("puts Radar right after Home, and keeps six primary items (six 44px tabs fit a 360px phone)", () => {
-    expect(PRIMARY_NAV.map((item) => item.href)).toEqual(["/", "/radar", "/restaurants", "/investors", "/general", "/tasks"]);
+  it("puts This week and Radar right after Home", () => {
+    expect(PRIMARY_NAV.map((item) => item.href)).toEqual(["/", "/week", "/radar", "/restaurants", "/investors", "/general", "/tasks"]);
+  });
+
+  it("keeps six tabs on phones (six 44px tabs fit a 360px phone); Tasks stays in the sidebar and on Home", () => {
+    expect(MOBILE_NAV.map((item) => item.href)).toEqual(["/", "/week", "/radar", "/restaurants", "/investors", "/general"]);
   });
 });
 

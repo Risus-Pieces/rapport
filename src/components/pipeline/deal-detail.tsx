@@ -19,6 +19,7 @@ import { formatDay, todayString } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { deletionSummary } from "@/lib/delete-summary";
 import { FIRM_TYPE_LABELS, getStage, INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
+import { AdviceCallCard } from "@/components/raise/advice-call";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
 import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
@@ -90,6 +91,9 @@ export async function DealDetail({ section, id, outreachError }: { section: Pipe
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
+          {section === "investors" ? (
+            <AdviceCallCard dealId={deal.id} doneAt={str(deal.details.adviceCallAt)} back={`/${section}/${deal.id}`} />
+          ) : null}
           {outreach.length ? (
             <div id="outreach" className="scroll-mt-6 space-y-6">
               {outreach.map((o, i) => (

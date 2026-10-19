@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { gmailOkAction } from "@/app/(app)/week/actions";
 import { getPitch, warmMatches, type OutreachRow } from "@/db/queries/radar";
+import { outreachMessages } from "@/db/queries/raise";
 import { formatDay, todayString } from "@/lib/dates";
 import { gmailComposeUrl, linkedinSearchUrl, missingPitch } from "@/lib/radar/drafts";
 import { PURPOSES, type Purpose } from "@/lib/radar/types";
@@ -73,7 +75,8 @@ export async function OutreachPanel({
   error?: string;
   showName?: boolean;
 }) {
-  const [pitch, warm] = await Promise.all([getPitch(userId), warmMatches(userId, [o.radarItemId])]);
+  const [pitch, warm, messages] = await Promise.all([getPitch(userId), warmMatches(userId, [o.radarItemId]), outreachMessages(userId, o.id)]);
+  const inGmail = messages.filter((m) => m.status === "in_gmail");
   const today = todayString();
   const from = pitch["pitch.sender_email"] || null;
   const due = o.stage === "sent" && o.nextFollowupAt !== null && o.nextFollowupAt <= today && o.touches < MAX_TOUCHES;
@@ -120,6 +123,24 @@ export async function OutreachPanel({
             </>
           ) : null}
         </dl>
+      ) : null}
+
+      {inGmail.length ? (
+        <p className="rounded-xl bg-accent px-4 py-3 text-sm">
+          In your Gmail Drafts: {inGmail.map((m) => m.subject || m.kind).join(", ")}. Review and send it from Gmail; it&apos;s tracked here automatically.
+        </p>
+      ) : o.gmailOk && o.stage === "drafted" ? (
+        <p className="rounded-xl bg-accent px-4 py-3 text-sm">This draft goes to your Gmail Drafts tomorrow morning.</p>
+      ) : o.stage === "drafted" && o.email ? (
+        <form action={gmailOkAction} className="flex flex-wrap items-center gap-3 text-sm">
+          <input type="hidden" name="item" value={o.radarItemId} />
+          <input type="hidden" name="back" value={back} />
+          <Button type="submit" size="lg" variant="outline">
+            <Mail aria-hidden />
+            Put this draft in Gmail
+          </Button>
+          <span className="text-muted-foreground">It lands in your Gmail Drafts tomorrow morning; nothing is sent.</span>
+        </form>
       ) : null}
 
       {o.body && (o.stage === "drafted" || due) ? (
