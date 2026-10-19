@@ -65,6 +65,9 @@ describe("routine prompts", () => {
     expect(p).toContain('email_source="public"');
     expect(p).toMatch(/Never offer equity/);
     expect(p).toContain("You NEVER send anything.");
+    expect(p).toContain("reveal_personal_emails=false, no phone, no waterfall");
+    expect(p).toMatch(/employer matches/);
+    expect(p).toMatch(/nextgen[^\n]*only a business or management contact/);
   });
 
   it("gmail (daily): only creates drafts and watches; never sends; checks the account", () => {
@@ -81,6 +84,12 @@ describe("routine prompts", () => {
     expect(p).toContain("create_draft");
     expect(p).toMatch(/sender_email/);
     expect(p).not.toMatch(/apollo|WebSearch/i);
+    // Watch first (so a reply stops a due follow-up), then push; look for an existing draft before creating one.
+    expect(p.indexOf("select rr_gmail_watch() as w")).toBeLessThan(p.indexOf("create a Gmail draft"));
+    expect(p).toMatch(/Before creating each draft, list_drafts/);
+    expect(p).toContain("select rr_outreach_watch() as watch");
+    expect(p).toContain("select rr_outreach_observe('<radar_item_id>', '<sent|replied>', '<ISO timestamp>') as r");
+    expect(p).toMatch(/If you cannot determine the account, create nothing/);
   });
 
   it("digest: only to the owner, links into Rapport", () => {

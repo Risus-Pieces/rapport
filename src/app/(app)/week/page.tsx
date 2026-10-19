@@ -52,7 +52,9 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
         ? "Saved. The next monthly update will use these."
         : one(sp.saved) === "raise"
           ? "Raise goal saved."
-          : one(sp.phase) === "raising"
+          : one(sp.confirm) === "launch"
+            ? "Tick “Yes, Sooz has launched” to start the raise."
+            : one(sp.phase) === "raising"
             ? "Raising. The routine drafts the launch ask for everyone marked Advice call done; they land in Gmail Drafts."
             : null;
 
@@ -91,6 +93,12 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
               </form>
               <form action={setPhaseAction} className="flex flex-wrap items-center gap-3">
                 <input type="hidden" name="phase" value={raise.phase === "building" ? "raising" : "building"} />
+                {raise.phase === "building" ? (
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input type="checkbox" name="confirm" value="yes" required className="size-5 accent-primary" />
+                    Yes, Sooz has launched
+                  </label>
+                ) : null}
                 <Button type="submit" size="lg" variant={raise.phase === "building" ? "default" : "outline"}>
                   {raise.phase === "building" ? "We launched: start the raise" : "Back to building relationships"}
                 </Button>

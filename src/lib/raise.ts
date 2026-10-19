@@ -11,7 +11,7 @@ export const MAX_TARGET = 100_000_000;
 export function parseRaiseForm(values: Record<string, string | undefined>, current: RaiseSettings): RaiseSettings {
   const raw = (values.target ?? "").replace(/[$,\s]/g, "");
   const n = /^\d+(\.\d+)?$/.test(raw) ? Number(raw) : NaN;
-  const target = Number.isFinite(n) && n > 0 && n <= MAX_TARGET ? Math.round(n) : current.target;
+  const target = Number.isFinite(n) && Math.round(n) >= 1 && n <= MAX_TARGET ? Math.round(n) : current.target;
   const date = (values.launchDate ?? "").trim();
   const launchDate = date === "" ? null : isValidDateString(date) ? date : current.launchDate;
   const phase = values.phase === "building" || values.phase === "raising" ? values.phase : current.phase;

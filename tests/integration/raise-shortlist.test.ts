@@ -106,6 +106,7 @@ describe.skipIf(!hasDevDb)("weekly shortlist (runs against the Neon dev branch)"
     const appr = await item("Approved Earlier", { score: 95 });
     const { approveRadarItem } = await import("@/db/queries/radar");
     await approveRadarItem(owner, appr);
+    await q(`update outreach set gmail_ok = true where radar_item_id = $1`, [appr]); // the owner put this one in Gmail
     await set([row(short, 1)]);
     expect((await one<{ n: number }>(`select rr_outreach_queue($1) as n`, [owner]))!.n).toBe(0); // both already have rows
     const todo = (await one<{ t: { prospects: { name: string; shortlisted: boolean; shortlist_ask: string | null }[] } }>(`select rr_outreach_todo(8, $1) as t`, [owner]))!.t;

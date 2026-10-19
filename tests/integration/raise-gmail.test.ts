@@ -105,6 +105,7 @@ describe.skipIf(!hasDevDb)("Gmail drafts, updates and launch asks (runs against 
   });
 
   it("only queues updates and launch asks for people marked Advice call done", async () => {
+    await setting("raise.phase", "raising");
     const no = await person("Not Yet Talked", { stage: "sent" });
     const yes = await person("Talked To", { stage: "sent", advice: true });
     expect(await saveMsg(no.id, "launch_ask", "launch")).toBe("not ready");

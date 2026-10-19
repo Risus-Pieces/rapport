@@ -14,7 +14,7 @@ describe("raise settings", () => {
     });
   });
 
-  it.each([[""], ["-5"], ["abc"], ["0"], ["1e12"]])("keeps the current target when given %j", (target) => {
+  it.each([[""], ["-5"], ["abc"], ["0"], ["0.4"], ["1e12"]])("keeps the current target when given %j", (target) => {
     expect(parseRaiseForm({ target, launchDate: "2027-01-15", phase: "building" }, current).target).toBe(75000);
   });
 

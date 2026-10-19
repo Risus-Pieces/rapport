@@ -34,6 +34,8 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       [owner, contact, title, stage],
     ))!.id;
     await q(`update radar_items set contact_id = $2, deal_id = $3 where id = $1`, [id, contact, deal]);
+    // Approved for Gmail, as approving from the weekly shortlist does (drafting covers shortlist + Gmail-approved people).
+    await q(`insert into outreach (user_id, radar_item_id, contact_id, deal_id, gmail_ok) values ($1, $2, $3, $4, true)`, [owner, id, contact, deal]);
     return { id, contact, deal };
   };
   const queue = async () => (await one<{ n: number }>(`select rr_outreach_queue($1) as n`, [owner]))!.n;
@@ -83,7 +85,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       await item("Dismissed Find", { score: 95, status: "dismissed" });
       await item("An Event", { score: 99, kind: "event" });
       await item("Career Person", { score: 99, feed: "career", kind: "internship" });
-      expect(await queue()).toBe(1); // the shortlist already opened Short Pick's row
+      expect(await queue()).toBe(0); // the shortlist opened Short Pick's row; the approval opened Low Approved's
       expect(await queue()).toBe(0);
       const t = await todo();
       expect(t.prospects.map((p) => [p.name, p.approved, p.purpose, p.kind])).toEqual([

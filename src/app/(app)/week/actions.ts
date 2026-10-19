@@ -46,6 +46,8 @@ export async function setPhaseAction(formData: FormData) {
   const session = await requireSession();
   const phase = str(formData, "phase");
   if (phase !== "building" && phase !== "raising") return;
+  // Starting the raise drafts launch asks for everyone marked Advice call done, so it needs an explicit confirmation.
+  if (phase === "raising" && str(formData, "confirm") !== "yes") redirect("/week?confirm=launch");
   const current = await getRaise(session.user.id);
   await saveRaise(session.user.id, { ...current, phase });
   refresh();

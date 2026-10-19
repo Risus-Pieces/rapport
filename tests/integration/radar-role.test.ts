@@ -38,7 +38,7 @@ describe.skipIf(!hasDevDb)("radar_routine role (runs against the Neon dev branch
     "rr_sync_crm_investors(text)",
     "rr_ready_people(text, text, text)",
   ];
-  const TABLES = ["contacts", "companies", "deals", "activities", "tasks", "user", "session", "account", "verification", "radar_items", "radar_runs", "outreach", "network", "app_settings"];
+  const TABLES = ["contacts", "companies", "deals", "activities", "tasks", "user", "session", "account", "verification", "radar_items", "radar_runs", "outreach", "network", "app_settings", "shortlist", "outreach_messages"];
 
   it("exists, can log in, and is not a member of any other role", async () => {
     const r = await one<{ login: boolean; member_of: number }>(
