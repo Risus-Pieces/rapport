@@ -12,8 +12,8 @@ export const PITCH_FIELDS = [
   { key: "pitch.website", label: "Website", placeholder: "drinksooz.com" },
   { key: "pitch.one_liner", label: "One-liner", placeholder: "What Sooz is, in one sentence" },
   { key: "pitch.traction", label: "Traction (verified facts only)", placeholder: "e.g. 40 retail doors in Houston; 32% repeat rate" },
-  { key: "pitch.raise", label: "Raise", placeholder: "e.g. $500k pre-seed SAFE (leave blank to not mention)" },
-  { key: "pitch.deck_url", label: "Deck link", placeholder: "DocSend / Drive link (optional)" },
+  { key: "pitch.raise", label: "Instrument (launch ask only)", placeholder: "e.g. SAFE (leave blank to not mention)" },
+  { key: "pitch.deck_url", label: "Deck link (launch ask only)", placeholder: "DocSend / Drive link (optional)" },
   { key: "pitch.sender_name", label: "Sender name", placeholder: "Your name" },
   { key: "pitch.sender_title", label: "Sender title", placeholder: "Co-founder & CEO" },
   { key: "pitch.sender_email", label: "Send from (Google account)", placeholder: "you@drinksooz.com" },
@@ -110,8 +110,6 @@ export function templateDrafts(p: DraftInput, pitch: Pitch): Drafts {
   const title = pitch["pitch.sender_title"]?.trim();
   const site = pitch["pitch.website"]?.trim();
   const traction = pitch["pitch.traction"]?.trim();
-  const raise = pitch["pitch.raise"]?.trim();
-  const deck = pitch["pitch.deck_url"]?.trim();
   const cal = pitch["pitch.calendar_url"]?.trim();
   const myRice = pitch["pitch.rice_affiliation"]?.trim();
   const theirRice = p.details?.rice_connection?.trim();
@@ -130,10 +128,9 @@ export function templateDrafts(p: DraftInput, pitch: Pitch): Drafts {
             ? `Quick ask from a ${company} founder`
             : `${company}: ${tagline}`;
 
-  // Only investors hear about a raise, and only as "starting conversations" (never terms).
-  const ask = purpose === "invest" && raise
-    ? `We're starting conversations ahead of our ${raise}. I'd value 20 minutes of your perspective on the category — and, if it's a fit, I'm happy to share more.`
-    : A.ask;
+  // First notes never mention the round, its amount, instrument or deck: the raise is only shared with people
+  // the owner has already talked to (Reg D 506(b); see the launch ask in the routines).
+  const ask = A.ask;
   const pressAngle = purpose === "press" && myRice ? `\nThe angle: a Rice student (${myRice}) building a beverage brand from campus.` : "";
 
   const lines = [
@@ -146,7 +143,6 @@ export function templateDrafts(p: DraftInput, pitch: Pitch): Drafts {
     pressAngle,
     "",
     ask,
-    deck && purpose === "invest" ? `\nA short overview is here: ${deck}` : "",
     cal ? `If easier, here's my calendar: ${cal}` : "",
     "",
     "Best,",

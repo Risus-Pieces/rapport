@@ -32,9 +32,9 @@ describe("templateDrafts", () => {
     const one = templateDrafts(angel({ details: { firm: "Acme", rice_connection: "MBA '09" } }), pitch);
     expect(one.subject).not.toContain("Owl");
   });
-  it("mentions the raise and traction only when provided", () => {
+  it("mentions traction when provided, never the raise", () => {
     const d = templateDrafts(angel(), { ...pitch, "pitch.raise": "$500k pre-seed", "pitch.traction": "In 40 H-E-B stores." });
-    expect(d.body).toContain("ahead of our $500k pre-seed");
+    expect(d.body).not.toContain("$500k pre-seed");
     expect(d.body).toContain("In 40 H-E-B stores.");
   });
   it("leaves visible placeholders when pitch facts are missing", () => {
@@ -82,11 +82,15 @@ describe("templateDrafts by purpose", () => {
     const noRice = templateDrafts(angel({ kind: "media", purpose: "press" }), pitch);
     expect(noRice.body).not.toContain("Rice");
   });
-  it("intro notes ask for a pointer; invest keeps the raise wording", () => {
+  it("intro notes ask for a pointer; first notes to investors never mention the round, the instrument or the deck", () => {
     expect(templateDrafts(angel({ purpose: "intro" }), raisePitch).body).toContain("comfortable introducing me to");
-    const inv = templateDrafts(angel({ kind: "nextgen" }), raisePitch);
-    expect(inv.body).toContain("ahead of our $500k pre-seed SAFE");
-    expect(inv.body).toContain("https://deck.example");
+    for (const kind of ["angel", "nextgen"]) {
+      const inv = templateDrafts(angel({ kind }), raisePitch);
+      for (const text of [inv.subject, inv.body, inv.linkedin_note, inv.followup_1, inv.followup_2]) {
+        expect(text).not.toMatch(/rais|round|pre-seed|SAFE|\$|deck\.example|invest/i);
+      }
+      expect(inv.body).toContain("20 minutes of your perspective");
+    }
   });
 });
 
