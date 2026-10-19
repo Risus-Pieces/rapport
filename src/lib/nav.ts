@@ -1,4 +1,5 @@
 import {
+  CalendarCheck,
   House,
   Landmark,
   ListChecks,
@@ -16,6 +17,8 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   accent?: SectionAccent;
+  /** false = sidebar only (the phone tab bar fits six). */
+  mobile?: boolean;
 };
 
 // Literal class strings on purpose: Tailwind only generates classes it can see
@@ -43,12 +46,15 @@ export const SECTION_STYLES: Record<SectionAccent, { dot: string; chip: string; 
 
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/", label: "Home", icon: House },
+  { href: "/week", label: "This week", icon: CalendarCheck },
   { href: "/radar", label: "Radar", icon: Radar },
   { href: "/restaurants", label: "Restaurants", icon: UtensilsCrossed, accent: "restaurants" },
   { href: "/investors", label: "Investors", icon: Landmark, accent: "investors" },
   { href: "/general", label: "General", icon: Users, accent: "general" },
-  { href: "/tasks", label: "Tasks", icon: ListChecks },
+  { href: "/tasks", label: "Tasks", icon: ListChecks, mobile: false },
 ];
+
+export const MOBILE_NAV: NavItem[] = PRIMARY_NAV.filter((item) => item.mobile !== false);
 
 export const SECONDARY_NAV: NavItem[] = [{ href: "/settings", label: "Settings", icon: Settings }];
 

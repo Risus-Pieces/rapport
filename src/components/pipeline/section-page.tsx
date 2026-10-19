@@ -20,6 +20,8 @@ import {
   type InvestorType,
   type PipelineSection,
 } from "@/lib/sections";
+import { RaiseProgressBar } from "@/components/raise/raise-progress";
+import { raiseProgress } from "@/db/queries/raise";
 import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +73,7 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
   const deals = dealsView ? await listDeals(userId, section, { type, q }) : [];
   const people = view === "people" ? await listContacts(userId, section, { q }) : [];
   const companies = view === "companies" ? await listCompanies(userId, section, { q }) : [];
+  const progress = section === "investors" ? await raiseProgress(userId) : null;
   const Icon = section === "restaurants" ? UtensilsCrossed : Landmark;
 
   return (
@@ -86,6 +89,12 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
           </Button>
         }
       />
+
+      {progress ? (
+        <Link href="/week" className="mb-6 block max-w-xl rounded-2xl border border-border p-4 transition-colors hover:border-input">
+          <RaiseProgressBar progress={progress} compact />
+        </Link>
+      ) : null}
 
       <div className="mb-6 space-y-3">
         <nav aria-label="Views" className="flex flex-wrap gap-2">

@@ -16,16 +16,29 @@ describe.skipIf(!hasDevDb)("radar_routine role (runs against the Neon dev branch
     "rr_owner()",
     "rr_known_titles(text, text)",
     "rr_ingest(text, text, text[], boolean, jsonb, text)",
-    "rr_outreach_queue(integer, text)",
+    "rr_outreach_queue(text)",
     "rr_outreach_todo(integer, text)",
     "rr_outreach_save(uuid, jsonb, text)",
     "rr_outreach_watch(text)",
     "rr_outreach_observe(uuid, text, timestamp with time zone, text)",
     "rr_digest_email(integer, text, text)",
     "rr_mark_digested(uuid[], text)",
+    "rr_shortlist_candidates(text)",
+    "rr_shortlist_set(jsonb, text)",
+    "rr_message_save(uuid, text, text, text, text, text)",
+    "rr_gmail_todo(text)",
+    "rr_gmail_record(text, text, text, text)",
+    "rr_gmail_watch(text)",
+    "rr_gmail_observe(text, text, timestamp with time zone, text)",
+    "rr_update_todo(date, text)",
+    "rr_launch_todo(text)",
   ];
-  const APP_ONLY = ["rr_outreach_record(uuid, text, timestamp with time zone, text)"];
-  const TABLES = ["contacts", "companies", "deals", "activities", "tasks", "user", "session", "account", "verification", "radar_items", "radar_runs", "outreach", "network", "app_settings"];
+  const APP_ONLY = [
+    "rr_outreach_record(uuid, text, timestamp with time zone, text)",
+    "rr_sync_crm_investors(text)",
+    "rr_ready_people(text, text, text)",
+  ];
+  const TABLES = ["contacts", "companies", "deals", "activities", "tasks", "user", "session", "account", "verification", "radar_items", "radar_runs", "outreach", "network", "app_settings", "shortlist", "outreach_messages"];
 
   it("exists, can log in, and is not a member of any other role", async () => {
     const r = await one<{ login: boolean; member_of: number }>(

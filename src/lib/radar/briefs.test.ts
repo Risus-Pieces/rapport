@@ -18,6 +18,9 @@ describe("research tasks", () => {
       for (const k of KINDS[f]) expect(emitted, `${f}: ${k}`).toContain(k);
     }
   });
+  it("looks for Houston cafés and coffee shops as buyers (pre-launch proof)", () => {
+    expect(TASKS.find((t) => t.id === "sooz-buyers")!.brief).toMatch(/cafés, coffee shops and specialty stores/);
+  });
   it("keeps job in Career only", () => {
     expect(KINDS.personal).not.toContain("job");
     expect(KINDS.career).toContain("job");

@@ -43,6 +43,48 @@
       "when": 1792035973862,
       "tag": "0005_radar_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792451281944,
+      "tag": "0006_raise_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792451283861,
+      "tag": "0007_raise_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792451405696,
+      "tag": "0008_raise_shortlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792451551223,
+      "tag": "0009_raise_shortlist_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792451718532,
+      "tag": "0010_raise_gmail",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792453032917,
+      "tag": "0011_raise_fixes",
+      "breakpoints": true
     }
   ]
 }

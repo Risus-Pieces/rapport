@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { TASKS } from "@/lib/radar/briefs";
-import { DB, buildDigestRoutinePrompt, buildOutreachRoutinePrompt, buildResearchRoutinePrompt } from "@/lib/radar/routine";
+import { DB, buildDigestRoutinePrompt, buildGmailRoutinePrompt, buildOutreachRoutinePrompt, buildResearchRoutinePrompt } from "@/lib/radar/routine";
 
 const CONN = `project_id="little-lake-33520023", branch_id="br-spring-unit-b86mju41", database_name="neondb", role_name="radar_routine"`;
 
 describe("routine prompts", () => {
   it("point at Rapport's production database as the restricted routine role", () => {
     expect(DB).toEqual({ project: "little-lake-33520023", branch: "br-spring-unit-b86mju41", database: "neondb", role: "radar_routine" });
-    for (const p of [buildResearchRoutinePrompt(["sooz"]), buildOutreachRoutinePrompt({ apolloBudget: 5, minScore: 75 }), buildDigestRoutinePrompt("boxuanzhao1128@gmail.com", "https://rapport-liard.vercel.app")]) {
+    for (const p of [buildResearchRoutinePrompt(["sooz"]), buildOutreachRoutinePrompt({ apolloBudget: 5 }), buildDigestRoutinePrompt("boxuanzhao1128@gmail.com", "https://rapport-liard.vercel.app")]) {
       expect(p).toContain(CONN);
       expect(p).not.toContain("green-hall-60323582");
       expect(p).not.toMatch(/\boq_/);
@@ -43,25 +43,53 @@ describe("routine prompts", () => {
     expect(p).toContain("Adults only");
   });
 
-  it("outreach: pre-drafts strong finds, watches approved people only, never sends", () => {
-    const p = buildOutreachRoutinePrompt({ apolloBudget: 5, minScore: 75 });
+  it("outreach (Monday): builds the shortlist, drafts it, then updates and launch asks — and never touches Gmail", () => {
+    const p = buildOutreachRoutinePrompt({ apolloBudget: 5 });
     for (const sql of [
-      "select rr_outreach_queue(75) as added",
+      "select rr_shortlist_candidates() as c",
+      "select rr_shortlist_set($oq$<JSON array>$oq$::jsonb) as n",
+      "select rr_outreach_queue() as added",
       "select rr_outreach_todo(8) as todo",
       "select rr_outreach_save('<radar_item_id>', $oq$<JSON object>$oq$::jsonb) as r",
-      "select rr_outreach_watch() as watch",
-      "select rr_outreach_observe('<radar_item_id>', '<sent|replied>', '<ISO timestamp>') as r",
+      "select rr_update_todo() as u",
+      "select rr_launch_todo() as l",
+      "select rr_message_save('<radar_item_id>', '<update|launch_ask|launch_followup>', '<period>', $oq$<subject>$oq$, $oq$<body>$oq$) as r",
     ]) expect(p).toContain(sql);
-    expect(p).toMatch(/not yet approved/);
-    expect(p).toMatch(/only people the owner has approved/);
+    expect(p).toContain("4 investors and 2 buyers");
+    expect(p).toMatch(/never mention the round, the amount, the instrument, terms or the deck/);
+    expect(p).not.toContain("rr_outreach_watch");
+    expect(p).not.toMatch(/search_threads|create_draft/);
+    expect(p).toContain("Do not use Gmail");
     for (const purpose of ["invest", "ambassador", "buyer", "press", "intro"]) expect(p).toContain(`- ${purpose} (`);
     expect(p).toContain("at most 5 lookups this run");
     expect(p).toContain('email_source="public"');
     expect(p).toMatch(/Never offer equity/);
-    expect(p).toContain("FTC endorsement rules");
-    expect(p).toContain("school's NIL rules");
     expect(p).toContain("You NEVER send anything.");
+    expect(p).toContain("reveal_personal_emails=false, no phone, no waterfall");
+    expect(p).toMatch(/employer matches/);
+    expect(p).toMatch(/nextgen[^\n]*only a business or management contact/);
+  });
+
+  it("gmail (daily): only creates drafts and watches; never sends; checks the account", () => {
+    const p = buildGmailRoutinePrompt();
+    expect(p).toMatch(/^Scheduled daily run of the "Rapport" GMAIL DRAFTS job\./);
+    expect(p).toContain(CONN);
+    for (const sql of [
+      "select rr_gmail_todo() as t",
+      "select rr_gmail_record('<key>', '<draft id>', '<thread id>') as r",
+      "select rr_gmail_watch() as w",
+      "select rr_gmail_observe('<key>', '<sent|replied>', '<ISO timestamp>') as r",
+    ]) expect(p).toContain(sql);
     expect(p).toContain("Never call Gmail send_message");
+    expect(p).toContain("create_draft");
+    expect(p).toMatch(/sender_email/);
+    expect(p).not.toMatch(/apollo|WebSearch/i);
+    // Watch first (so a reply stops a due follow-up), then push; look for an existing draft before creating one.
+    expect(p.indexOf("select rr_gmail_watch() as w")).toBeLessThan(p.indexOf("create a Gmail draft"));
+    expect(p).toMatch(/Before creating each draft, list_drafts/);
+    expect(p).toContain("select rr_outreach_watch() as watch");
+    expect(p).toContain("select rr_outreach_observe('<radar_item_id>', '<sent|replied>', '<ISO timestamp>') as r");
+    expect(p).toMatch(/If you cannot determine the account, create nothing/);
   });
 
   it("digest: only to the owner, links into Rapport", () => {

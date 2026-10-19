@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   date,
   doublePrecision,
@@ -258,6 +259,8 @@ export const outreach = pgTable(
     nextFollowupAt: date("next_followup_at", { mode: "string" }),
     touches: integer("touches").notNull().default(0),
     repliedAt: timestamp("replied_at", { withTimezone: true }),
+    // The owner approved this person's drafts going to Gmail Drafts (set by approving the weekly shortlist).
+    gmailOk: boolean("gmail_ok").notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -302,4 +305,60 @@ export const appSettings = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],
+);
+
+// --- Raise mode: weekly shortlist and the individual messages pushed to Gmail Drafts ---------------
+
+export const shortlist = pgTable(
+  "shortlist",
+  {
+    id: pk(),
+    userId: ownerId(),
+    week: date("week", { mode: "string" }).notNull(),
+    radarItemId: uuid("radar_item_id")
+      .notNull()
+      .references(() => radarItems.id, { onDelete: "cascade" }),
+    bucket: text("bucket").notNull(),
+    rank: integer("rank").notNull().default(0),
+    reason: text("reason").notNull().default(""),
+    ask: text("ask").notNull().default(""),
+    status: text("status").notNull().default("proposed"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("shortlist_user_week_item_idx").on(t.userId, t.week, t.radarItemId),
+    index("shortlist_item_idx").on(t.radarItemId),
+    check("shortlist_bucket_check", sql`${t.bucket} in ('investor', 'buyer')`),
+    check("shortlist_status_check", sql`${t.status} in ('proposed', 'approved', 'skipped')`),
+  ],
+);
+
+export const outreachMessages = pgTable(
+  "outreach_messages",
+  {
+    id: pk(),
+    userId: ownerId(),
+    outreachId: uuid("outreach_id")
+      .notNull()
+      .references(() => outreach.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    period: text("period").notNull().default(""),
+    subject: text("subject"),
+    body: text("body"),
+    status: text("status").notNull().default("ready"),
+    gmailDraftId: text("gmail_draft_id"),
+    gmailThreadId: text("gmail_thread_id"),
+    pushedAt: timestamp("pushed_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    repliedAt: timestamp("replied_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("outreach_messages_unique_idx").on(t.outreachId, t.kind, t.period),
+    index("outreach_messages_user_status_idx").on(t.userId, t.status),
+    check("outreach_messages_kind_check", sql`${t.kind} in ('first', 'followup_1', 'followup_2', 'update', 'launch_ask', 'launch_followup')`),
+    check("outreach_messages_status_check", sql`${t.status} in ('ready', 'in_gmail', 'sent', 'replied', 'skipped')`),
+  ],
 );
