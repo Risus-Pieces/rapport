@@ -71,6 +71,13 @@
       "when": 1792451551223,
       "tag": "0009_raise_shortlist_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792451718532,
+      "tag": "0010_raise_gmail",
+      "breakpoints": true
     }
   ]
 }
