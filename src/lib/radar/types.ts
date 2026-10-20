@@ -4,7 +4,7 @@ export type Feed = (typeof FEEDS)[number];
 export const isFeed = (f: string): f is Feed => (FEEDS as readonly string[]).includes(f);
 export const FEED_LABELS: Record<Feed, string> = { sooz: "Sooz", personal: "Personal", career: "Career" };
 
-export const RADAR_STATUSES = ["new", "seen", "saved", "dismissed", "approved"] as const;
+export const RADAR_STATUSES = ["new", "seen", "saved", "dismissed", "approved", "applied", "on_hold"] as const;
 export type RadarStatus = (typeof RADAR_STATUSES)[number];
 
 /** Kinds that are people (one person per item): identified by name + firm, and eligible for outreach. */
@@ -89,19 +89,9 @@ export function crmHref(item: { kind: string; contactId: string | null; dealId: 
 const KIND_LABELS: Record<string, string> = { nextgen: "Next-gen", media: "Press" };
 export const kindLabel = (kind: string) => KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
 
-/** The /radar URL that shows a finding: the right tab, the view its status lives in, and a search for it. */
-export function radarHref(item: { feed: string; kind: string; status: string; title: string }): string {
-  const query = new URLSearchParams();
-  const tab = item.feed === "sooz" ? (isPersonKind(item.kind) ? null : "sooz") : item.feed;
-  if (tab) query.set("tab", tab);
-  if (item.status === "approved" || item.status === "dismissed" || item.status === "saved") query.set("view", item.status);
-  query.set("q", item.title);
-  return `/radar?${query.toString()}`;
-}
-
 /** What to tell the owner when an outreach button had no effect (null when there is nothing to say). */
 export function outreachResultMessage(result: string): string | null {
-  if (result === "not approved") return "That person is no longer in the CRM. Approve them again from the Radar.";
+  if (result === "not approved") return "That person is no longer in the CRM.";
   if (result === "not found") return "That outreach no longer exists.";
   return null;
 }

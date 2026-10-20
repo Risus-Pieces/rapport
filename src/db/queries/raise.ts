@@ -210,14 +210,14 @@ export async function weekSummary(userId: string, now: Date = new Date()): Promi
       `select i.title as name, o.next_followup_at::text as due, i.kind as item_kind, i.contact_id, i.deal_id, o.gmail_ok
          from outreach o join radar_items i on i.id = o.radar_item_id
         where o.user_id = $1 and o.stage = 'sent' and o.touches < 3 and o.next_followup_at <= current_date
+          and rr_relationship(i) = 'known'
         order by o.next_followup_at`,
       [userId],
     ),
     db.$client.query<{ id: string; title: string; deadline: string; url: string | null; feed: string; kind: string }>(
       `select id, title, deadline::text as deadline, url, feed, kind from radar_items
         where user_id = $1 and deadline between current_date and current_date + 30
-          and ((feed = 'sooz' and kind in ('funding', 'sampling') and status in ('new', 'seen', 'saved'))
-               or (feed in ('personal', 'career') and status = 'saved'))
+          and status in ('new', 'seen', 'saved') and not rr_is_person(kind)
         order by deadline, score desc`,
       [userId],
     ),

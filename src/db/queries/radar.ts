@@ -1,19 +1,16 @@
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appSettings, contacts, network, outreach, radarItems, radarRuns } from "@/db/schema";
 import { dedupeKey, slug } from "@/lib/radar/dedupe";
 import { PITCH_FIELDS, type Pitch, type PitchKey } from "@/lib/radar/drafts";
 import { EMAIL_RE, LINKEDIN_RE, companyKey, parseProspectCsv, type Connection } from "@/lib/radar/import";
 import {
-  FEEDS,
   PERSON_KINDS,
   defaultPurpose,
   isPurpose,
   type CrmTarget,
-  type Feed,
   type RadarDetails,
 } from "@/lib/radar/types";
-import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
@@ -53,139 +50,7 @@ export async function approveRadarItem(userId: string, itemId: string): Promise<
   return approval(r.section, r.contact_id, r.company_id, r.deal_id);
 }
 
-// --- Listing ---------------------------------------------------------------------------------
-
-export const RADAR_VIEWS = ["inbox", "saved", "approved", "dismissed"] as const;
-export type RadarView = (typeof RADAR_VIEWS)[number];
-const VIEW_STATUSES: Record<RadarView, string[]> = {
-  inbox: ["new", "seen"],
-  saved: ["saved"],
-  approved: ["approved"],
-  dismissed: ["dismissed"],
-};
-
-export const RADAR_SORTS = ["score", "date", "newest"] as const;
-export type RadarSort = (typeof RADAR_SORTS)[number];
-
-/** people: true = person kinds only, false = everything but people, undefined = all. */
-export type RadarFilters = { feed: Feed; view: RadarView; kind?: string; q?: string; rice?: boolean; sort: RadarSort; people?: boolean };
-
-export type RadarRow = typeof radarItems.$inferSelect & {
-  outreachStage: string | null;
-  hasDraft: boolean;
-  draft: { subject: string | null; body: string } | null;
-};
-
-const peopleFilter = (people: boolean | undefined) =>
-  people === undefined
-    ? undefined
-    : people
-      ? inArray(radarItems.kind, [...PERSON_KINDS])
-      : sql`${radarItems.kind} not in (${sql.join(PERSON_KINDS.map((k) => sql`${k}`), sql`, `)})`;
-
-// Past events are noise in the inbox; they stay visible once the owner has acted on them.
-const notPast = sql`(coalesce(${radarItems.eventDate}, ${radarItems.deadline}) is null or coalesce(${radarItems.eventDate}, ${radarItems.deadline}) >= current_date)`;
-
-export async function listRadar(userId: string, f: RadarFilters): Promise<RadarRow[]> {
-  const q = f.q?.trim().slice(0, 100);
-  const pattern = q ? `%${escapeLike(q)}%` : null;
-  const where: (SQL | undefined)[] = [
-    eq(radarItems.userId, userId),
-    eq(radarItems.feed, f.feed),
-    inArray(radarItems.status, VIEW_STATUSES[f.view]),
-    f.kind ? eq(radarItems.kind, f.kind) : undefined,
-    peopleFilter(f.people),
-    f.rice ? sql`'rice' = any(${radarItems.tags})` : undefined,
-    f.view === "inbox" ? notPast : undefined,
-    pattern
-      ? or(
-          ilike(radarItems.title, pattern),
-          ilike(radarItems.summary, pattern),
-          ilike(radarItems.whyRelevant, pattern),
-          sql`${radarItems.details}::text ilike ${pattern}`,
-          sql`array_to_string(${radarItems.tags}, ' ') ilike ${pattern}`,
-        )
-      : undefined,
-  ];
-  const order =
-    f.sort === "date"
-      ? [sql`coalesce(${radarItems.eventDate}, ${radarItems.deadline}) asc nulls last`, desc(radarItems.score)]
-      : f.sort === "newest"
-        ? [desc(radarItems.firstSeen), desc(radarItems.score)]
-        : [desc(radarItems.score), desc(radarItems.firstSeen)];
-  const rows = await db
-    .select({ item: radarItems, outreachStage: outreach.stage, subject: outreach.subject, body: outreach.body })
-    .from(radarItems)
-    .leftJoin(outreach, eq(outreach.radarItemId, radarItems.id))
-    .where(and(...where))
-    .orderBy(...order)
-    .limit(300);
-  return rows.map((r) => ({
-    ...r.item,
-    outreachStage: r.outreachStage,
-    hasDraft: r.body !== null,
-    draft: r.body !== null ? { subject: r.subject, body: r.body } : null,
-  }));
-}
-
-export async function radarCounts(userId: string, feed: Feed, people?: boolean): Promise<Record<RadarView, number>> {
-  const rows = await db
-    .select({ status: radarItems.status, n: count() })
-    .from(radarItems)
-    .where(
-      and(
-        eq(radarItems.userId, userId),
-        eq(radarItems.feed, feed),
-        peopleFilter(people),
-        or(sql`${radarItems.status} not in ('new', 'seen')`, notPast),
-      ),
-    )
-    .groupBy(radarItems.status);
-  const by = Object.fromEntries(rows.map((r) => [r.status, r.n])) as Record<string, number>;
-  return {
-    inbox: (by.new ?? 0) + (by.seen ?? 0),
-    saved: by.saved ?? 0,
-    approved: by.approved ?? 0,
-    dismissed: by.dismissed ?? 0,
-  };
-}
-
-export async function radarNewCounts(userId: string): Promise<Record<Feed, number>> {
-  const rows = await db
-    .select({ feed: radarItems.feed, n: count() })
-    .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.status, "new"), notPast))
-    .groupBy(radarItems.feed);
-  const out = Object.fromEntries(FEEDS.map((f) => [f, 0])) as Record<Feed, number>;
-  for (const r of rows) if (r.feed in out) out[r.feed as Feed] = r.n;
-  return out;
-}
-
-export async function radarKindCounts(userId: string, feed: Feed, view: RadarView, people?: boolean): Promise<{ kind: string; n: number }[]> {
-  return db
-    .select({ kind: radarItems.kind, n: count() })
-    .from(radarItems)
-    .where(
-      and(
-        eq(radarItems.userId, userId),
-        eq(radarItems.feed, feed),
-        inArray(radarItems.status, VIEW_STATUSES[view]),
-        peopleFilter(people),
-        view === "inbox" ? notPast : undefined,
-      ),
-    )
-    .groupBy(radarItems.kind)
-    .orderBy(desc(count()));
-}
-
-/** New people in the Sooz feed (the badge on the "People" tab). */
-export async function radarPeopleNewCount(userId: string): Promise<number> {
-  const [row] = await db
-    .select({ n: count() })
-    .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, "sooz"), eq(radarItems.status, "new"), peopleFilter(true), notPast));
-  return row?.n ?? 0;
-}
+// --- Drafts and research runs ---------------------------------------------------------------
 
 /** Drafts ready to send (approved people) and drafts waiting for the owner's approval. */
 export async function outreachDraftCounts(userId: string): Promise<{ ready: number; waiting: number }> {
@@ -203,25 +68,8 @@ export async function recentRadarRuns(userId: string, limit = 8) {
   return db.select().from(radarRuns).where(eq(radarRuns.userId, userId)).orderBy(desc(radarRuns.startedAt)).limit(limit);
 }
 
-/** Triage. Never changes an approved finding (approval is undone only by deleting the CRM record). */
-export async function setRadarStatus(userId: string, id: string, status: "seen" | "saved" | "dismissed"): Promise<boolean> {
-  const rows = await db
-    .update(radarItems)
-    .set({ status })
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.id, id), sql`(${radarItems.status} <> 'approved' or ${radarItems.contactId} is null)`))
-    .returning({ id: radarItems.id });
-  return rows.length > 0;
-}
-
 export async function setRadarNotes(userId: string, id: string, notes: string): Promise<void> {
   await db.update(radarItems).set({ notes: notes.slice(0, 4000) }).where(and(eq(radarItems.userId, userId), eq(radarItems.id, id)));
-}
-
-export async function markFeedSeen(userId: string, feed: Feed): Promise<void> {
-  await db
-    .update(radarItems)
-    .set({ status: "seen" })
-    .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, feed), eq(radarItems.status, "new")));
 }
 
 // --- Pitch facts and network -----------------------------------------------------------------

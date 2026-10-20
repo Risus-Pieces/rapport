@@ -1,9 +1,9 @@
 import {
   CalendarCheck,
+  Compass,
   House,
   Landmark,
   ListChecks,
-  Radar,
   Settings,
   UtensilsCrossed,
   Users,
@@ -47,7 +47,7 @@ export const SECTION_STYLES: Record<SectionAccent, { dot: string; chip: string; 
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/", label: "Home", icon: House },
   { href: "/week", label: "This week", icon: CalendarCheck },
-  { href: "/radar", label: "Radar", icon: Radar },
+  { href: "/opportunities", label: "Opportunities", icon: Compass },
   { href: "/restaurants", label: "Restaurants", icon: UtensilsCrossed, accent: "restaurants" },
   { href: "/investors", label: "Investors", icon: Landmark, accent: "investors" },
   { href: "/general", label: "General", icon: Users, accent: "general" },

@@ -219,7 +219,8 @@ export const radarItems = pgTable(
     index("radar_items_contact_idx").on(t.contactId),
     index("radar_items_deal_idx").on(t.dealId),
     check("radar_items_feed_check", sql`${t.feed} in ('sooz', 'personal', 'career')`),
-    check("radar_items_status_check", sql`${t.status} in ('new', 'seen', 'saved', 'dismissed', 'approved')`),
+    // People are 'approved' (in the CRM); opportunities are new/seen/saved (To apply), applied, on_hold or dismissed.
+    check("radar_items_status_check", sql`${t.status} in ('new', 'seen', 'saved', 'dismissed', 'approved', 'applied', 'on_hold')`),
     check("radar_items_score_check", sql`${t.score} between 0 and 100`),
   ],
 );

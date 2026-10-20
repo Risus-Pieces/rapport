@@ -16,8 +16,8 @@ describe("filterPalette", () => {
     expect(filterPalette("this week").pages).toEqual([{ label: "This week", href: "/week" }]);
   });
 
-  it("lists the Radar page", () => {
-    expect(filterPalette("radar").pages).toEqual([{ label: "Radar", href: "/radar" }]);
+  it("lists the Opportunities page", () => {
+    expect(filterPalette("opport").pages).toEqual([{ label: "Opportunities", href: "/opportunities" }]);
   });
 
   it("returns nothing when nothing matches", () => {

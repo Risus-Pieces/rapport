@@ -24,7 +24,7 @@ const RECORD_PAGE = /^\/(investors|restaurants|general)\/[0-9a-f-]{36}$/;
 
 function backTo(formData: FormData, extra?: Record<string, string>): string {
   const raw = formData.get("back");
-  const path = typeof raw === "string" && RECORD_PAGE.test(raw) ? raw : "/radar";
+  const path = typeof raw === "string" && RECORD_PAGE.test(raw) ? raw : "/investors";
   const query = new URLSearchParams(extra).toString();
   return `${path}${query ? `?${query}` : ""}#outreach`;
 }

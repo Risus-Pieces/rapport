@@ -4,7 +4,9 @@ import { ReminderBadge } from "@/components/reminder-badge";
 import { TaskList } from "@/components/tasks/task-list";
 import { PipelineSnapshot } from "@/components/pipeline-snapshot";
 import { pipelineSnapshot, recentActivities } from "@/db/queries/dashboard";
-import { outreachDraftCounts, radarNewCounts, radarPeopleNewCount } from "@/db/queries/radar";
+import { newOpportunityCounts } from "@/db/queries/opportunities";
+import { outreachDraftCounts } from "@/db/queries/radar";
+import { relationshipCounts } from "@/db/queries/relationships";
 import { formatDay } from "@/lib/dates";
 import { listFollowUps } from "@/db/queries/contacts";
 import { listOpenTasks } from "@/db/queries/tasks";
@@ -31,22 +33,25 @@ const SECTION_TILES = PRIMARY_NAV.flatMap((item) => (item.accent ? [{ ...item, a
 export default async function HomePage() {
   const session = await requireSession();
   const today = todayString();
-  const [openTasks, followUps, restaurants, investors, recent, radarNew, peopleNew, drafts] = await Promise.all([
+  const [openTasks, followUps, restaurants, investors, recent, fresh, investorRels, generalRels, drafts] = await Promise.all([
     listOpenTasks(session.user.id),
     listFollowUps(session.user.id),
     pipelineSnapshot(session.user.id, "restaurants"),
     pipelineSnapshot(session.user.id, "investors"),
     recentActivities(session.user.id),
-    radarNewCounts(session.user.id),
-    radarPeopleNewCount(session.user.id),
+    newOpportunityCounts(session.user.id),
+    relationshipCounts(session.user.id, "investors"),
+    relationshipCounts(session.user.id, "general"),
     outreachDraftCounts(session.user.id),
   ]);
   const radarLinks = [
-    { label: "new people", n: peopleNew, href: "/radar" },
-    { label: "Sooz opportunities", n: radarNew.sooz - peopleNew, href: "/radar?tab=sooz" },
-    { label: "Personal", n: radarNew.personal, href: "/radar?tab=personal" },
-    { label: "Career", n: radarNew.career, href: "/radar?tab=career" },
-    { label: drafts.waiting === 1 ? "draft waiting for your approval" : "drafts waiting for your approval", n: drafts.waiting, href: "/radar" },
+    { label: "investors to reach out", n: investorRels.to_reach_out, href: "/investors?rel=to_reach_out" },
+    { label: "people to reach out", n: generalRels.to_reach_out, href: "/general?rel=to_reach_out" },
+    { label: "ghosted", n: investorRels.ghosted + generalRels.ghosted, href: investorRels.ghosted ? "/investors?rel=ghosted" : "/general?rel=ghosted" },
+    { label: "new Sooz opportunities", n: fresh.sooz, href: "/opportunities" },
+    { label: "new Personal", n: fresh.personal, href: "/opportunities?feed=personal" },
+    { label: "new Career", n: fresh.career, href: "/opportunities?feed=career" },
+    { label: drafts.waiting === 1 ? "draft waiting for your approval" : "drafts waiting for your approval", n: drafts.waiting, href: "/week" },
   ].filter((l) => l.n > 0);
   const groups = groupOpenTasks(openTasks, today);
   const dueTasks = [...groups.overdue, ...groups.today];
@@ -111,13 +116,13 @@ export default async function HomePage() {
         </Card>
         <Card className="gap-3 p-5">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-base font-medium">Radar</h2>
+            <h2 className="text-base font-medium">Outreach and opportunities</h2>
             <span className="flex gap-4">
               <Link href="/week" className="text-sm text-primary hover:underline">
                 This week
               </Link>
-              <Link href="/radar" className="text-sm text-primary hover:underline">
-                Open Radar
+              <Link href="/opportunities" className="text-sm text-primary hover:underline">
+                Opportunities
               </Link>
             </span>
           </div>

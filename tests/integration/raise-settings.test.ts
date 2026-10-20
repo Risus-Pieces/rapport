@@ -86,15 +86,17 @@ describe.skipIf(!hasDevDb)("raise settings, advice calls, progress and the week 
     expect(await raise.outreachMessages(randomUUID(), oid.id)).toEqual([]);
   });
 
-  it("collects the week: applications due within 30 days, replies, and nudges", async () => {
+  it("collects the week: To apply deadlines within 30 days, replies, and nudges", async () => {
     await q(`insert into radar_items (user_id, feed, kind, title, url, score, status, deadline, dedupe_key) values
       ($1, 'sooz', 'funding', 'Pitch Prize', 'https://x.com/p', 80, 'saved', $2, 'a1'),
       ($1, 'sooz', 'funding', 'Far Prize', 'https://x.com/f', 80, 'saved', $3, 'a2'),
       ($1, 'career', 'fellowship', 'Saved Fellowship', 'https://x.com/s', 80, 'saved', $2, 'a3'),
       ($1, 'career', 'fellowship', 'Unsaved Fellowship', 'https://x.com/u', 80, 'new', $2, 'a4'),
-      ($1, 'sooz', 'funding', 'Gone Prize', 'https://x.com/g', 80, 'dismissed', $2, 'a5')`, [owner, day(10), day(40)]);
+      ($1, 'sooz', 'funding', 'Gone Prize', 'https://x.com/g', 80, 'dismissed', $2, 'a5'),
+      ($1, 'career', 'internship', 'Applied Intern', 'https://x.com/i', 80, 'applied', $2, 'a6'),
+      ($1, 'sooz', 'angel', 'Some Person', 'https://x.com/n', 80, 'new', $2, 'a7')`, [owner, day(10), day(40)]);
     const w = await raise.weekSummary(owner);
-    expect(w.applications.map((a) => a.title).sort()).toEqual(["Pitch Prize", "Saved Fellowship"]);
+    expect(w.applications.map((a) => a.title).sort()).toEqual(["Pitch Prize", "Saved Fellowship", "Unsaved Fellowship"]);
     expect(w.nudges).toEqual({ tractionStale: true, monthFactsStale: true });
     await q(`insert into app_settings (user_id, key, value) values ($1, 'pitch.traction', '200 cans sampled')`, [owner]);
     await raise.saveMonthFacts(owner, { progress: "p", ask: "a", next: "n" });

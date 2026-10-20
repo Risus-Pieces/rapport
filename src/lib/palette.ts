@@ -4,7 +4,7 @@ export const PALETTE_ITEMS: { pages: PaletteItem[]; actions: PaletteItem[] } = {
   pages: [
     { label: "Home", href: "/" },
     { label: "This week", href: "/week" },
-    { label: "Radar", href: "/radar" },
+    { label: "Opportunities", href: "/opportunities" },
     { label: "Restaurants", href: "/restaurants" },
     { label: "Investors", href: "/investors" },
     { label: "General", href: "/general" },
