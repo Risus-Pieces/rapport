@@ -96,6 +96,7 @@ describe("routine prompts", () => {
     expect(p).toMatch(/If you cannot determine the account, create nothing/);
     // Ghosted after the cadence ends; checked after watching for replies.
     expect(p).toContain("select rr_refresh_ghosted() as n");
+    expect(p).toMatch(/only count messages dated after `since`/);
     expect(p.indexOf("select rr_gmail_watch() as w")).toBeLessThan(p.lastIndexOf("rr_refresh_ghosted"));
   });
 

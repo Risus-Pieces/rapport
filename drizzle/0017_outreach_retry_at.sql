@@ -1,0 +1,1 @@
+ALTER TABLE "outreach" ADD COLUMN "retry_at" timestamp with time zone;

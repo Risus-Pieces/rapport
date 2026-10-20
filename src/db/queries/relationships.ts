@@ -18,7 +18,13 @@ export async function setContactRelationship(userId: string, contactId: string, 
     .set({ relationship: r, relationshipAt: new Date(), archivedAt: archiveFor(r) })
     .where(and(eq(contacts.userId, userId), eq(contacts.id, contactId)))
     .returning({ id: contacts.id });
+  if (updated && r === "known") await outreachKnown(userId, contactId, null);
   return Boolean(updated);
+}
+
+// Know them means a thread whose cadence ended was answered somehow, so it is never ghosted again.
+async function outreachKnown(userId: string, contactId: string | null, dealId: string | null) {
+  await db.$client.query(`select rr_outreach_known($1, $2, $3)`, [contactId, dealId, userId]);
 }
 
 /** Sets a pipeline deal's relationship, and its person's with it. */
@@ -36,7 +42,10 @@ export async function setDealRelationship(userId: string, dealId: string, r: Rel
         .set({ relationship: r, relationshipAt: new Date(), archivedAt: archiveFor(r) })
         .where(and(eq(contacts.userId, userId), eq(contacts.id, updated.contactId)));
     }
-    return true;
+    return { contactId: updated.contactId };
+  }).then(async (done) => {
+    if (done && r === "known") await outreachKnown(userId, done.contactId, dealId);
+    return Boolean(done);
   });
 }
 
@@ -72,16 +81,14 @@ export async function restoreRelationship(userId: string, target: { dealId?: str
   return setContactRelationship(userId, target.contactId, rows[0].touched ? "known" : "to_reach_out");
 }
 
-/** Try again from a CRM record (only from Ghosted): resets that person's outreach for a circling-back note. */
+/** Try again from a CRM record (only from Ghosted): resets the threads that went quiet for a circling-back note. */
 export async function tryAgainFor(userId: string, target: { dealId?: string; contactId?: string }) {
-  const { rows } = await db.$client.query<{ ok: boolean }>(
-    `select rr_try_again(i.id, $1) as ok
-       from radar_items i join outreach o on o.radar_item_id = i.id
-      where i.user_id = $1 and (i.deal_id = $2::uuid or i.contact_id = $3::uuid)
-      order by o.updated_at desc limit 1`,
-    [userId, target.dealId ?? null, target.contactId ?? null],
-  );
-  return rows[0]?.ok ?? false;
+  const { rows } = await db.$client.query<{ n: number }>(`select rr_try_again_record($1, $2, $3) as n`, [
+    target.dealId ?? null,
+    target.contactId ?? null,
+    userId,
+  ]);
+  return rows[0].n > 0;
 }
 
 /** Ghosted is computed when CRM pages load (and by the daily routine). */

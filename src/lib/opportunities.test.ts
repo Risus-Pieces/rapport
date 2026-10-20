@@ -22,7 +22,9 @@ describe("old /radar links", () => {
     expect(radarRedirect({ tab: "career", q: "x" })).toBe("/opportunities?feed=career&q=x");
     expect(radarRedirect({ tab: "sooz", view: "dismissed", kind: "event" })).toBe("/opportunities?view=dismissed&kind=event");
     expect(radarRedirect({ tab: "personal", view: "saved" })).toBe("/opportunities?feed=personal");
-    // People live in the CRM now; their old tab and views fall back to the Sooz feed.
-    expect(radarRedirect({ tab: "people", view: "approved", kind: "angel", q: ["Ann", "Bo"] })).toBe("/opportunities?q=Ann");
+    // People live in the CRM now: an old link to a person searches Investors' To reach out (most of them are there).
+    expect(radarRedirect({ tab: "people", view: "approved", kind: "angel", q: ["Ann", "Bo"] })).toBe("/investors?rel=to_reach_out&q=Ann");
+    expect(radarRedirect({ q: "Ann" })).toBe("/investors?rel=to_reach_out&q=Ann");
+    expect(radarRedirect({ tab: "people" })).toBe("/opportunities");
   });
 });

@@ -9,20 +9,10 @@ begin
      where user_id = p_user and feed = 'sooz' and rr_is_person(kind) and status in ('new', 'seen', 'saved')
      order by first_seen, id
   loop
-    begin
-      perform rr_approve_item(v_id, p_user);
-      n := n + 1;
-    exception when others then
-      raise warning 'rr_move_radar_people: % not moved: %', v_id, sqlerrm;
-    end;
+    perform rr_approve_item(v_id, p_user);
+    n := n + 1;
   end loop;
   return n;
 end $$;
 revoke all on function rr_move_radar_people(text) from public;
-
-do $$ declare u text; n int; begin
-  for u in select id from "user" loop
-    n := rr_move_radar_people(u);
-    raise notice 'moved % Radar people into the CRM for %', n, u;
-  end loop;
-end $$;
+-- Run by 0018, after the review fixes.

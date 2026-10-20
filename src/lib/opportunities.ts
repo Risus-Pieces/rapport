@@ -40,12 +40,14 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 export function radarRedirect(params: Params): string {
   const query = new URLSearchParams();
   const tab = first(params.tab);
+  const q = first(params.q).trim();
+  // The Radar's default tab was its people; they live in the CRM now.
+  if ((!tab || tab === "people") && q) return `/investors?${new URLSearchParams({ rel: "to_reach_out", q })}`;
   if (isFeed(tab) && tab !== "sooz") query.set("feed", tab);
   const view = first(params.view);
   if (view === "dismissed") query.set("view", view);
   const kind = first(params.kind);
   if (kind && !isPersonKind(kind)) query.set("kind", kind);
-  const q = first(params.q).trim();
   if (q) query.set("q", q);
   const text = query.toString();
   return text ? `/opportunities?${text}` : "/opportunities";

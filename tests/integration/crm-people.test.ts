@@ -221,4 +221,94 @@ describe.skipIf(!hasDevDb)("people in the CRM (runs against the Neon dev branch)
       expect(await rel.relationshipCounts(owner, "general")).toMatchObject({ to_reach_out: 1 });
     });
   });
+
+  describe("review fixes", () => {
+    it("after Try again, sends and replies from before the reset are ignored, and the watch says since when", async () => {
+      const g = await sentAngel("Watch Retry");
+      await raise.refreshGhosted(owner);
+      await raise.tryAgain(owner, g.id);
+      await q(`update outreach set stage = 'drafted', subject = 'Circling back', body = 'Hi again', gmail_ok = false where id = $1`, [g.oid]);
+      const watch = (await one<{ w: { radar_item_id: string; since: string | null }[] }>(`select rr_outreach_watch($1) as w`, [owner]))!.w;
+      expect(watch).toEqual([expect.objectContaining({ radar_item_id: g.id, since: expect.any(String) })]);
+      expect(await one(`select rr_outreach_observe($1, 'sent', now() - interval '20 days', $2) as r`, [g.id, owner])).toEqual({ r: "ignored" });
+      expect(await one(`select rr_outreach_observe($1, 'replied', now() - interval '20 days', $2) as r`, [g.id, owner])).toEqual({ r: "ignored" });
+      expect(await one(`select stage from outreach where id = $1`, [g.oid])).toEqual({ stage: "drafted" });
+      expect(await one(`select rr_outreach_observe($1, 'sent', now(), $2) as r`, [g.id, owner])).toEqual({ r: "ok" });
+    });
+
+    it("Know them on a Ghosted person sticks, and an advice call means they are not ghosted", async () => {
+      const g = await sentAngel("Back In Touch");
+      await raise.refreshGhosted(owner);
+      expect(await relOf("deals", g.deal_id)).toBe("ghosted");
+      await rel.setDealRelationship(owner, g.deal_id!, "known");
+      expect(await raise.refreshGhosted(owner)).toBe(0);
+      expect(await relOf("deals", g.deal_id)).toBe("known");
+      const a = await sentAngel("Had A Call");
+      await q(`update deals set details = details || '{"adviceCallAt":"2026-10-01"}'::jsonb where id = $1`, [a.deal_id]);
+      expect(await raise.refreshGhosted(owner)).toBe(0);
+    });
+
+    it("a dismissed or on-hold person found again (other firm, other section) stays out of To reach out", async () => {
+      await ingest([finding("Old Gone", "angel", { details: { firm: "First Fund" } })]);
+      const first = (await item("Old Gone"))!;
+      await rel.setDealRelationship(owner, first.deal_id!, "dismissed");
+      const friend = (await one<{ id: string }>(`insert into contacts (user_id, section, name) values ($1, 'general', 'Held Hugh') returning id`, [owner]))!.id;
+      await rel.setContactRelationship(owner, friend, "on_hold");
+      await q(`insert into radar_items (user_id, feed, kind, title, url, score, status, dedupe_key) values ($1, 'sooz', 'creator', 'Never Mind', 'https://x.com/nm', 70, 'dismissed', 'creator:never-mind')`, [owner]);
+      const r = await ingest([
+        finding("Old Gone", "angel", { url: "https://other.example/og", details: { firm: "Second Fund" } }),
+        finding("Held Hugh", "angel", { url: "https://x.com/hh" }),
+        finding("Never Mind", "angel", { url: "https://x.com/nm2" }),
+      ]);
+      expect(r).toMatchObject({ inserted: 3, added_to_crm: 0 });
+      const statuses = await q<{ title: string; status: string }>(`select title, status from radar_items where user_id = $1 and contact_id is null order by title`, [owner]);
+      expect(statuses).toEqual([
+        { title: "Held Hugh", status: "dismissed" },
+        { title: "Never Mind", status: "dismissed" },
+        { title: "Never Mind", status: "dismissed" },
+        { title: "Old Gone", status: "dismissed" },
+      ]);
+      expect(await rel.relationshipCounts(owner, "investors")).toMatchObject({ to_reach_out: 0, dismissed: 1 });
+    });
+
+    it("the same person found twice gets one outreach thread", async () => {
+      await ingest([finding("Twin Tess", "angel", { details: { firm: "A Fund" } })]);
+      await ingest([finding("Twin Tess", "angel", { url: "https://x.com/tess2", details: { firm: "B Fund" } })]);
+      expect(await one(`select count(*)::int n from outreach where user_id = $1`, [owner])).toEqual({ n: 1 });
+      expect((await candidates()).map((c) => c.name)).toEqual(["Twin Tess"]);
+    });
+
+    it("Try again on a restaurant resets the buyer whose emails went unanswered, not another buyer's fresh drafts", async () => {
+      const co = (await one<{ id: string }>(`insert into companies (user_id, section, name) values ($1, 'restaurants', 'Cafe Two') returning id`, [owner]))!.id;
+      await ingest([finding("Quiet Buyer", "buyer", { details: { firm: "Cafe Two" } }), finding("Fresh Buyer", "buyer", { url: "https://x.com/fb", details: { firm: "Cafe Two" } })]);
+      const quiet = (await item("Quiet Buyer"))!;
+      const fresh = (await item("Fresh Buyer"))!;
+      expect(quiet.deal_id).toBe(fresh.deal_id);
+      expect(co).toBeTruthy();
+      await q(`update outreach set stage = 'sent', touches = 3, last_touch_at = now() - interval '9 days', email = 'q@cafe.example', next_followup_at = null where radar_item_id = $1`, [quiet.id]);
+      await q(`insert into activities (user_id, type, summary, contact_id, occurred_at) values ($1, 'email', 'Sent intro', $2, now() - interval '20 days')`, [owner, quiet.contact_id]);
+      await q(`update outreach set stage = 'drafted', subject = 'Hi', body = 'Fresh draft' where radar_item_id = $1`, [fresh.id]);
+      await raise.refreshGhosted(owner);
+      expect(await rel.tryAgainFor(owner, { dealId: quiet.deal_id! })).toBe(true);
+      expect(await one(`select stage, body from outreach where radar_item_id = $1`, [quiet.id])).toEqual({ stage: "prospect", body: null });
+      expect(await one(`select stage, body from outreach where radar_item_id = $1`, [fresh.id])).toEqual({ stage: "drafted", body: "Fresh draft" });
+    });
+
+    it("a new buyer at a restaurant you already know is still someone to reach out to", async () => {
+      await ingest([finding("Known Buyer", "buyer", { details: { firm: "Cafe One" } })]);
+      const known = (await item("Known Buyer"))!;
+      await q(`insert into activities (user_id, type, summary, contact_id) values ($1, 'tasting', 'Tasting', $2)`, [owner, known.contact_id]);
+      await ingest([finding("New Buyer", "buyer", { url: "https://x.com/nb", details: { firm: "Cafe One" } })]);
+      const c = (await one<{ c: { buyers: { name: string }[] } }>(`select rr_shortlist_candidates($1) as c`, [owner]))!.c.buyers.map((b) => b.name);
+      expect(c).toEqual(["New Buyer"]);
+    });
+
+    it("moving the Radar's people respects earlier dismissals by name", async () => {
+      await q(`insert into radar_items (user_id, feed, kind, title, url, score, status, dedupe_key) values
+        ($1, 'sooz', 'angel', 'Repeat Ray', 'https://x.com/r1', 70, 'dismissed', 'angel:repeat-ray:a'),
+        ($1, 'sooz', 'angel', 'Repeat Ray', 'https://x.com/r2', 70, 'new', 'angel:repeat-ray:b')`, [owner]);
+      expect(await one(`select rr_move_radar_people($1) as n`, [owner])).toEqual({ n: 0 });
+      expect(await q(`select status from radar_items where user_id = $1`, [owner])).toEqual([{ status: "dismissed" }, { status: "dismissed" }]);
+    });
+  });
 });

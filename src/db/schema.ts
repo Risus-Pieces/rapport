@@ -272,6 +272,8 @@ export const outreach = pgTable(
     repliedAt: timestamp("replied_at", { withTimezone: true }),
     // The owner approved this person's drafts going to Gmail Drafts (set by approving the weekly shortlist).
     gmailOk: boolean("gmail_ok").notNull().default(false),
+    // Set by Try again: sends and replies dated before it belong to the earlier attempt.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

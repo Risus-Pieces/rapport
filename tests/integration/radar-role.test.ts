@@ -44,6 +44,9 @@ describe.skipIf(!hasDevDb)("radar_routine role (runs against the Neon dev branch
     "rr_mark_known(uuid, uuid, uuid, text)",
     "rr_backfill_relationships(text)",
     "rr_move_radar_people(text)",
+    "rr_suppressed(uuid)",
+    "rr_try_again_record(uuid, uuid, text)",
+    "rr_outreach_known(uuid, uuid, text)",
   ];
   const TABLES = ["contacts", "companies", "deals", "activities", "tasks", "user", "session", "account", "verification", "radar_items", "radar_runs", "outreach", "network", "app_settings", "shortlist", "outreach_messages"];
 
