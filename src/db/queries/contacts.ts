@@ -2,6 +2,7 @@ import { and, count, eq, ilike, inArray, isNotNull, isNull, max, or, sql } from 
 import { db } from "@/db";
 import { activities, companies, contacts, deals, tasks, type ActivityType, type Section } from "@/db/schema";
 import { getReminder, TOUCH_TYPES, compareReminders } from "@/lib/reminders";
+import type { Relationship } from "@/lib/relationships";
 import type { ContactInput } from "@/lib/validation/contact";
 import { escapeLike } from "./util";
 
@@ -25,7 +26,7 @@ export type ContactListItem = ReturnType<typeof withReminder<ContactRow>>;
 export async function listContacts(
   userId: string,
   section: Section | null,
-  options: { archived?: boolean; q?: string; now?: Date } = {},
+  options: { archived?: boolean; q?: string; now?: Date; relationship?: Relationship } = {},
 ): Promise<ContactListItem[]> {
   const q = options.q?.trim();
   const rows = await db
@@ -44,7 +45,12 @@ export async function listContacts(
       and(
         eq(contacts.userId, userId),
         section ? eq(contacts.section, section) : undefined,
-        options.archived ? isNotNull(contacts.archivedAt) : isNull(contacts.archivedAt),
+        // A relationship decides archiving by itself (On hold and Dismissed are the archived ones).
+        options.relationship
+          ? eq(contacts.relationship, options.relationship)
+          : options.archived
+            ? isNotNull(contacts.archivedAt)
+            : isNull(contacts.archivedAt),
         q
           ? or(
               ilike(contacts.name, `%${escapeLike(q)}%`),

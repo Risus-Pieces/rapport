@@ -105,5 +105,64 @@ describe.skipIf(!hasDevDb)("relationships (runs against the Neon dev branch)", (
     expect(await relOf("deals", d)).toBe("on_hold");
     expect(await relOf("contacts", c)).toBe("on_hold");
     expect(await rel.relationshipCounts(owner, "investors")).toMatchObject({ on_hold: 1, to_reach_out: 0, known: 0 });
+    await deal(await contact("Snap Known"), "intro");
+    await deal(await contact("Snap New"), "target");
+    const { pipelineSnapshot } = await import("@/db/queries/dashboard");
+    const snap = await pipelineSnapshot(owner, "investors");
+    expect(snap.stages.filter((x) => x.count > 0).map((x) => [x.key, x.count])).toEqual([["intro", 1]]);
+  });
+
+  it("lists deals and contacts by relationship; On hold and Dismissed contacts are the archived ones", async () => {
+    const { listDeals } = await import("@/db/queries/deals");
+    const { listContacts } = await import("@/db/queries/contacts");
+    const fresh = await deal(await contact("Fresh Fay"), "target");
+    await deal(await contact("Known Kim"), "intro");
+    const held = await deal(await contact("Held Hal"), "target");
+    await rel.setDealRelationship(owner, held, "on_hold");
+    const titles = async (r: "to_reach_out" | "known" | "on_hold") =>
+      (await listDeals(owner, "investors", { relationship: r })).map((d) => d.contactName);
+    expect(await titles("to_reach_out")).toEqual(["Fresh Fay"]);
+    expect(await titles("known")).toEqual(["Known Kim"]);
+    expect(await titles("on_hold")).toEqual(["Held Hal"]);
+    expect(fresh).toBeTruthy();
+
+    const reach = await contact("Reach Rae", "general");
+    await rel.setContactRelationship(owner, reach, "to_reach_out");
+    await contact("Friend Flo", "general");
+    const gone = await contact("Gone Gil", "general");
+    await rel.setContactRelationship(owner, gone, "dismissed");
+    const names = async (r: "to_reach_out" | "known" | "dismissed") =>
+      (await listContacts(owner, "general", { relationship: r })).map((c) => c.name);
+    expect(await names("to_reach_out")).toEqual(["Reach Rae"]);
+    expect(await names("known")).toEqual(["Friend Flo"]);
+    expect(await names("dismissed")).toEqual(["Gone Gil"]);
+    expect(await rel.relationshipCounts(owner, "general")).toMatchObject({ to_reach_out: 1, known: 1, dismissed: 1 });
+  });
+
+  it("Restore puts someone back where they were: To reach out if never contacted, Know them otherwise", async () => {
+    const c1 = await contact("Never Met");
+    const d1 = await deal(c1, "target");
+    await rel.setDealRelationship(owner, d1, "dismissed");
+    expect(await rel.restoreRelationship(owner, { dealId: d1 })).toBe(true);
+    expect(await relOf("deals", d1)).toBe("to_reach_out");
+    expect(await relOf("contacts", c1)).toBe("to_reach_out");
+    const c2 = await contact("Met Once", "general");
+    await q(`insert into activities (user_id, type, summary, contact_id) values ($1, 'meeting', 'Coffee', $2)`, [owner, c2]);
+    await rel.setContactRelationship(owner, c2, "on_hold");
+    expect(await rel.restoreRelationship(owner, { contactId: c2 })).toBe(true);
+    expect(await one(`select relationship, archived_at is null as live from contacts where id = $1`, [c2])).toEqual({ relationship: "known", live: true });
+    expect(await rel.restoreRelationship(randomUUID(), { contactId: c2 })).toBe(false);
+  });
+
+  it("Try again from a CRM record finds that person's outreach", async () => {
+    const { approveRadarItem } = await import("@/db/queries/radar");
+    const item = (await one<{ id: string }>(`insert into radar_items (user_id, feed, kind, title, url, score, dedupe_key) values ($1, 'sooz', 'creator', 'Gone Quiet', 'https://x.com/g', 80, 'g') returning id`, [owner]))!.id;
+    const a = await approveRadarItem(owner, item);
+    await q(`update outreach set stage = 'sent', touches = 3, last_touch_at = now() - interval '9 days', email = 'g@x.example' where radar_item_id = $1`, [item]);
+    await q(`update contacts set relationship = 'known' where id = $1`, [a.contactId]);
+    expect(await rel.tryAgainFor(owner, { contactId: a.contactId })).toBe(false);
+    await q(`select rr_refresh_ghosted($1)`, [owner]);
+    expect(await rel.tryAgainFor(owner, { contactId: a.contactId })).toBe(true);
+    expect(await relOf("contacts", a.contactId)).toBe("to_reach_out");
   });
 });

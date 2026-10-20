@@ -21,6 +21,7 @@ import { deletionSummary } from "@/lib/delete-summary";
 import { FIRM_TYPE_LABELS, getStage, INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
 import { AdviceCallCard } from "@/components/raise/advice-call";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
+import { RelationshipControl } from "@/components/relationship-control";
 import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
@@ -88,6 +89,10 @@ export async function DealDetail({ section, id, outreachError }: { section: Pipe
           </div>
         }
       />
+
+      <div className="mb-6">
+        <RelationshipControl kind="deal" id={deal.id} relationship={deal.relationship} back={`/${section}/${deal.id}`} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">

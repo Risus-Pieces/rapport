@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { listContacts } from "@/db/queries/contacts";
+import { refreshGhosted, relationshipCounts } from "@/db/queries/relationships";
+import { MOVES_FROM, RelationshipButton } from "@/components/relationship-control";
+import { RELATIONSHIP_LABELS, isRelationship, type Relationship } from "@/lib/relationships";
 import { describeLastTouch } from "@/lib/reminders";
 import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -20,6 +23,7 @@ const FILTERS = [
   { key: "due_soon", label: "Due soon" },
 ] as const;
 type FilterKey = (typeof FILTERS)[number]["key"];
+const RELATIONSHIP_TABS: Relationship[] = ["to_reach_out", "known", "ghosted", "on_hold", "dismissed"];
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -27,11 +31,11 @@ function one(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value) ?? "";
 }
 
-function hrefFor(params: { filter?: FilterKey; q?: string; archived?: boolean }) {
+function hrefFor(params: { filter?: FilterKey; q?: string; rel?: Relationship }) {
   const query = new URLSearchParams();
+  if (params.rel && params.rel !== "known") query.set("rel", params.rel);
   if (params.filter && params.filter !== "all") query.set("filter", params.filter);
   if (params.q) query.set("q", params.q);
-  if (params.archived) query.set("archived", "1");
   const text = query.toString();
   return text ? `/general?${text}` : "/general";
 }
@@ -40,11 +44,18 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
   const session = await requireSession();
   const sp = await searchParams;
   const q = one(sp.q).trim().slice(0, 100);
-  const archived = one(sp.archived) === "1";
+  // ?archived=1 is the old link for what is now On hold.
+  const requestedRel = one(sp.rel) || (one(sp.archived) === "1" ? "on_hold" : "");
+  const rel: Relationship = isRelationship(requestedRel) ? requestedRel : "known";
   const requested = one(sp.filter);
-  const filter: FilterKey = FILTERS.some((f) => f.key === requested) ? (requested as FilterKey) : "all";
+  const filter: FilterKey = rel === "known" && FILTERS.some((f) => f.key === requested) ? (requested as FilterKey) : "all";
 
-  const all = await listContacts(session.user.id, "general", { archived, q });
+  await refreshGhosted(session.user.id);
+  const [all, relCounts] = await Promise.all([
+    listContacts(session.user.id, "general", { q, relationship: rel }),
+    relationshipCounts(session.user.id, "general"),
+  ]);
+  const back = hrefFor({ filter, q, rel });
   const counts = {
     all: all.length,
     overdue: all.filter((c) => c.reminder.status === "overdue").length,
@@ -66,6 +77,23 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
         }
       />
 
+      <nav aria-label="Relationship" className="mb-3 flex flex-wrap gap-2">
+        {RELATIONSHIP_TABS.map((r) => (
+          <Link
+            key={r}
+            href={hrefFor({ q, rel: r })}
+            aria-current={rel === r ? "page" : undefined}
+            className={cn(
+              "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors",
+              rel === r ? "border-primary bg-accent font-medium ring-1 ring-primary" : "border-input hover:bg-accent",
+            )}
+          >
+            {RELATIONSHIP_LABELS[r]}
+            <span className="text-muted-foreground">{relCounts[r]}</span>
+          </Link>
+        ))}
+      </nav>
+
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <form action="/general" role="search" className="relative w-full sm:w-72">
           <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -73,55 +101,57 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
             Search contacts
           </label>
           <Input id="q" name="q" type="search" defaultValue={q} placeholder="Search name, email or role" className="pl-10" />
-          {archived ? <input type="hidden" name="archived" value="1" /> : null}
+          {rel !== "known" ? <input type="hidden" name="rel" value={rel} /> : null}
         </form>
-        <nav aria-label="Filter contacts" className="flex flex-wrap gap-2">
-          {FILTERS.map(({ key, label }) => {
-            const active = filter === key;
-            return (
-              <Link
-                key={key}
-                href={hrefFor({ filter: key, q, archived })}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors",
-                  active
-                    ? "border-primary bg-accent font-medium ring-1 ring-primary"
-                    : "border-input hover:bg-accent",
-                )}
-              >
-                {label}
-                <span className="text-muted-foreground">{counts[key]}</span>
-              </Link>
-            );
-          })}
-          <Link
-            href={hrefFor({ filter, q, archived: !archived })}
-            className="inline-flex min-h-11 items-center rounded-full px-4 text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            {archived ? "Hide archived" : "Show archived"}
-          </Link>
-        </nav>
+        {rel === "known" ? (
+          <nav aria-label="Filter contacts" className="flex flex-wrap gap-2">
+            {FILTERS.map(({ key, label }) => {
+              const active = filter === key;
+              return (
+                <Link
+                  key={key}
+                  href={hrefFor({ filter: key, q })}
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors",
+                    active
+                      ? "border-primary bg-accent font-medium ring-1 ring-primary"
+                      : "border-input hover:bg-accent",
+                  )}
+                >
+                  {label}
+                  <span className="text-muted-foreground">{counts[key]}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
       </div>
 
       {shown.length === 0 ? (
-        all.length === 0 && !q && !archived ? (
+        all.length === 0 && !q && rel === "known" && relCounts.known === 0 ? (
           <EmptyState icon={Users} title="No contacts yet">
             Add the people you want to stay in touch with and set how often you want to reach out.
           </EmptyState>
         ) : (
-          <EmptyState icon={Users} title={archived ? "Nothing archived here" : "No matches"}>
-            {q ? `No contacts match "${q}".` : "Try another filter."}
+          <EmptyState icon={Users} title={q ? "No matches" : rel === "known" ? "No matches" : "Nobody here"}>
+            {q
+              ? `No contacts match "${q}".`
+              : rel === "to_reach_out"
+                ? "Creators, celebrities and press the research finds show up here until you reach out."
+                : rel === "known"
+                  ? "Try another filter."
+                  : "Nobody in this list right now."}
           </EmptyState>
         )
       ) : (
         <Card className="p-2">
           <ul>
             {shown.map((contact) => (
-              <li key={contact.id}>
+              <li key={contact.id} className="flex flex-wrap items-center gap-2">
                 <Link
                   href={`/general/${contact.id}`}
-                  className="flex min-h-16 flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-3 py-3 transition-colors hover:bg-accent"
+                  className="flex min-h-16 min-w-0 flex-1 basis-80 flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-3 py-3 transition-colors hover:bg-accent"
                 >
                   <span className="min-w-0 flex-1 basis-48">
                     <span className="block truncate font-medium">{contact.name}</span>
@@ -136,6 +166,13 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
                     <ReminderBadge reminder={contact.reminder} />
                   </span>
                 </Link>
+                {rel !== "known" ? (
+                  <span className="flex flex-wrap gap-1 px-2 pb-2 sm:pb-0">
+                    {MOVES_FROM[rel].map((move) => (
+                      <RelationshipButton key={move} kind="contact" id={contact.id} move={move} back={back} variant="ghost" />
+                    ))}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

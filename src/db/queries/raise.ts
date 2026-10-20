@@ -5,6 +5,8 @@ import { crmHref, type RadarDetails } from "@/lib/radar/types";
 import { DEFAULT_RAISE, isStale, parseRaiseForm, type RaiseSettings } from "@/lib/raise";
 import { approveRadarItem } from "./radar";
 
+export { refreshGhosted } from "./relationships";
+
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
 export type ShortlistRow = {
@@ -264,12 +266,6 @@ export async function setGmailOk(userId: string, itemId: string): Promise<boolea
     [userId, itemId],
   );
   return rows.length > 0;
-}
-
-/** Marks people whose intro went unanswered (cadence over, 7 quiet days) as Ghosted; returns how many. */
-export async function refreshGhosted(userId: string): Promise<number> {
-  const { rows } = await db.$client.query<{ n: number }>(`select rr_refresh_ghosted($1) as n`, [userId]);
-  return rows[0].n;
 }
 
 /** Try again (only from Ghosted): back to To reach out with a fresh outreach row and a circling-back note next time. */

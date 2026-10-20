@@ -52,3 +52,40 @@ export async function relationshipCounts(userId: string, section: Section): Prom
   for (const row of rows) if (row.r in counts) counts[row.r as Relationship] = row.n;
   return counts;
 }
+
+/** Restore from On hold / Dismissed: To reach out if nobody has been in touch, Know them otherwise. */
+export async function restoreRelationship(userId: string, target: { dealId?: string; contactId?: string }) {
+  if (target.dealId) {
+    const { rows } = await db.$client.query<{ touched: boolean }>(
+      `select rr_touched(contact_id, company_id, id) as touched from deals where user_id = $1 and id = $2`,
+      [userId, target.dealId],
+    );
+    if (!rows.length) return false;
+    return setDealRelationship(userId, target.dealId, rows[0].touched ? "known" : "to_reach_out");
+  }
+  if (!target.contactId) return false;
+  const { rows } = await db.$client.query<{ touched: boolean }>(
+    `select rr_touched(id, company_id, null) as touched from contacts where user_id = $1 and id = $2`,
+    [userId, target.contactId],
+  );
+  if (!rows.length) return false;
+  return setContactRelationship(userId, target.contactId, rows[0].touched ? "known" : "to_reach_out");
+}
+
+/** Try again from a CRM record (only from Ghosted): resets that person's outreach for a circling-back note. */
+export async function tryAgainFor(userId: string, target: { dealId?: string; contactId?: string }) {
+  const { rows } = await db.$client.query<{ ok: boolean }>(
+    `select rr_try_again(i.id, $1) as ok
+       from radar_items i join outreach o on o.radar_item_id = i.id
+      where i.user_id = $1 and (i.deal_id = $2::uuid or i.contact_id = $3::uuid)
+      order by o.updated_at desc limit 1`,
+    [userId, target.dealId ?? null, target.contactId ?? null],
+  );
+  return rows[0]?.ok ?? false;
+}
+
+/** Ghosted is computed when CRM pages load (and by the daily routine). */
+export async function refreshGhosted(userId: string): Promise<number> {
+  const { rows } = await db.$client.query<{ n: number }>(`select rr_refresh_ghosted($1) as n`, [userId]);
+  return rows[0].n;
+}

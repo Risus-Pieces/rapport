@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ArchiveRestore, ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PriorityMeter } from "@/components/priority-meter";
 import { ReminderBadge } from "@/components/reminder-badge";
@@ -20,7 +20,7 @@ import { OutreachPanel } from "@/components/radar/outreach-panel";
 import { listOutreachFor } from "@/db/queries/radar";
 import { requireSession } from "@/lib/session";
 import { uuid } from "@/lib/validation/common";
-import { archiveContactAction } from "../actions";
+import { RelationshipControl } from "@/components/relationship-control";
 import { DeleteContactDialog } from "../_components/delete-contact-dialog";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -71,25 +71,21 @@ export default async function ContactPage({
       <PageHeader
         title={contact.name}
         accent="general"
-        description={archived ? "Archived. Restore to get reminders again." : (contact.title ?? undefined)}
+        description={archived ? "On hold or dismissed. Restore to get reminders again." : (contact.title ?? undefined)}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="lg" render={<Link href={`/general/${contact.id}/edit`} />}>
               <Pencil aria-hidden />
               Edit
             </Button>
-            <form action={archiveContactAction}>
-              <input type="hidden" name="id" value={contact.id} />
-              <input type="hidden" name="archived" value={archived ? "false" : "true"} />
-              <Button type="submit" variant="outline" size="lg">
-                {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
-                {archived ? "Restore" : "Archive"}
-              </Button>
-            </form>
             <DeleteContactDialog id={contact.id} name={contact.name} impact={impact} />
           </div>
         }
       />
+
+      <div className="mb-6">
+        <RelationshipControl kind="contact" id={contact.id} relationship={contact.relationship} back={`/general/${contact.id}`} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">

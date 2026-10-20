@@ -11,6 +11,7 @@ import {
   type InvestorType,
   type PipelineSection,
 } from "@/lib/sections";
+import type { Relationship } from "@/lib/relationships";
 import type { InvestorInput, RestaurantInput } from "@/lib/validation/deal";
 import { escapeLike } from "./util";
 
@@ -32,6 +33,7 @@ const dealRow = {
   details: deals.details,
   companyId: deals.companyId,
   contactId: deals.contactId,
+  relationship: deals.relationship,
   createdAt: deals.createdAt,
   companyName: companies.name,
   companyCity: companies.city,
@@ -55,6 +57,7 @@ export type DealRow = {
   details: Record<string, unknown>;
   companyId: string | null;
   contactId: string | null;
+  relationship: string;
   createdAt: Date;
   companyName: string | null;
   companyCity: string | null;
@@ -171,7 +174,7 @@ export async function createInvestorDeal(userId: string, input: InvestorInput) {
 export async function listDeals(
   userId: string,
   section: PipelineSection,
-  options: { type?: InvestorType; q?: string } = {},
+  options: { type?: InvestorType; q?: string; relationship?: Relationship } = {},
 ): Promise<DealRow[]> {
   const q = options.q?.trim();
   const rows = await db
@@ -183,6 +186,7 @@ export async function listDeals(
       and(
         eq(deals.userId, userId),
         eq(deals.section, section),
+        options.relationship ? eq(deals.relationship, options.relationship) : undefined,
         q
           ? or(
               ilike(deals.title, `%${escapeLike(q)}%`),
