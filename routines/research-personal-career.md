@@ -43,7 +43,7 @@ You may run the tasks below in parallel with general-purpose subagents, at most 
 }
    For people, `title` is ONE person's full name and `details` carries firm, role, rice_connection (only if a source states it), check_size (only if a source states it) and contact_path (the most credible PUBLIC route). Use null for unknowns. Add tag "rice" only for confirmed Rice University alumni or students.
 3. Call shape (b) once per task with that task's feed, id, allowed kinds and upcoming_only flag. The JSON goes inside `$oq$ ... $oq$` (if your JSON ever contains the text $oq$, use `$oq2$` for both delimiters). The JSON must be valid (double quotes, no trailing commas, escape inner quotes).
-4. Read the result. `rejected` lists findings the database refused, with reasons; if a rejection is a fixable formatting problem (e.g. bad date), fix and resubmit just those once. If the call fails with a JSON/SQL syntax error, fix the JSON and retry once. If a task still fails, record the error and continue with the next task.
+4. Read the result. People you submit go straight into the owner's CRM as To reach out (`added_to_crm` counts them), so only submit people worth contacting. `rejected` lists findings the database refused, with reasons; if a rejection is a fixable formatting problem (e.g. bad date), fix and resubmit just those once. If the call fails with a JSON/SQL syntax error, fix the JSON and retry once. If a task still fails, record the error and continue with the next task.
 
 ## Context
 - Feed `personal`: The user is a Rice University undergraduate (class of 2029) in Houston: founder-minded, technically curious, with broad interests. Strongest interests: AI and startups (hackathons, builder events, demo days), leadership development, cultural opportunities, and great events of every kind around Houston. They are also open to "anything interesting": fellowships, unusual programs, competitions, talks, free passes to big conferences, speaking slots, and student perks.
@@ -96,4 +96,4 @@ You may run the tasks below in parallel with general-purpose subagents, at most 
 - Anything with a date or deadline must NOT have passed as of TODAY (undated people and resources are fine). Prefer the next 6 months.
 
 ## Finish
-Do NOT send any email (a separate routine handles the digest). End with a short report: for each task, how many findings you submitted, and the inserted/updated/rejected counts from rr_ingest, plus any task that failed and why. Keep it under 25 lines.
+Do NOT send any email (a separate routine handles the digest). End with a short report: for each task, how many findings you submitted, and the inserted/updated/added_to_crm/rejected counts from rr_ingest, plus any task that failed and why. Keep it under 25 lines.

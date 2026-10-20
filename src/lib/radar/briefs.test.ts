@@ -60,7 +60,7 @@ describe("CRM targets and purposes", () => {
   it("explains an outreach button that did nothing", () => {
     expect(outreachResultMessage("ok")).toBeNull();
     expect(outreachResultMessage("ignored")).toBeNull();
-    expect(outreachResultMessage("not approved")).toBe("That person is no longer in the CRM. Approve them again from the Radar.");
+    expect(outreachResultMessage("not approved")).toBe("That person is no longer in the CRM.");
     expect(outreachResultMessage("not found")).toBe("That outreach no longer exists.");
   });
   it("labels kinds for people", () => {

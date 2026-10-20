@@ -22,6 +22,9 @@ import {
 } from "@/lib/sections";
 import { RaiseProgressBar } from "@/components/raise/raise-progress";
 import { raiseProgress } from "@/db/queries/raise";
+import { refreshGhosted, relationshipCounts } from "@/db/queries/relationships";
+import { MOVES_FROM, RelationshipButton } from "@/components/relationship-control";
+import { RELATIONSHIP_LABELS, isRelationship, type Relationship } from "@/lib/relationships";
 import { requireSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +39,9 @@ type ViewKey = (typeof VIEWS)[number]["key"];
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
+
+// Know them is the pipeline board; the other relationships are lists with quick moves.
+const RELATIONSHIP_TABS: Relationship[] = ["to_reach_out", "known", "ghosted", "on_hold", "dismissed"];
 
 const DESCRIPTIONS: Record<PipelineSection, string> = {
   restaurants: "Restaurants you are selling to, from first lead to active account.",
@@ -55,13 +61,16 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
   const requestedView = one(searchParams.view);
   const view: ViewKey = VIEWS.some((v) => v.key === requestedView) ? (requestedView as ViewKey) : "pipeline";
   const q = one(searchParams.q).trim().slice(0, 100);
+  const requestedRel = one(searchParams.rel);
+  const rel: Relationship = isRelationship(requestedRel) ? requestedRel : "known";
   const requestedType = one(searchParams.type);
   const type: InvestorType | undefined =
     section === "investors" && INVESTOR_TYPES.includes(requestedType as InvestorType) ? (requestedType as InvestorType) : undefined;
   const config = PIPELINES[section];
   const base = `/${section}`;
-  const href = (params: { view?: ViewKey; type?: InvestorType; q?: string }) => {
+  const href = (params: { view?: ViewKey; type?: InvestorType; q?: string; rel?: Relationship }) => {
     const query = new URLSearchParams();
+    if (params.rel && params.rel !== "known") query.set("rel", params.rel);
     if (params.view && params.view !== "pipeline") query.set("view", params.view);
     if (params.type) query.set("type", params.type);
     if (params.q) query.set("q", params.q);
@@ -70,7 +79,13 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
   };
 
   const dealsView = view === "pipeline" || view === "list";
-  const deals = dealsView ? await listDeals(userId, section, { type, q }) : [];
+  await refreshGhosted(userId);
+  const [deals, relCounts] = await Promise.all([
+    dealsView ? listDeals(userId, section, { type, q, relationship: rel }) : Promise.resolve([]),
+    relationshipCounts(userId, section),
+  ]);
+  const showBoard = view === "pipeline" && rel === "known";
+  const back = href({ view, type, q, rel });
   const people = view === "people" ? await listContacts(userId, section, { q }) : [];
   const companies = view === "companies" ? await listCompanies(userId, section, { q }) : [];
   const progress = section === "investors" ? await raiseProgress(userId) : null;
@@ -97,9 +112,17 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
       ) : null}
 
       <div className="mb-6 space-y-3">
+        <nav aria-label="Relationship" className="flex flex-wrap gap-2">
+          {RELATIONSHIP_TABS.map((r) => (
+            <Link key={r} href={href({ rel: r, view: r === "known" ? view : "list", type, q })} aria-current={rel === r ? "page" : undefined} className={pill(rel === r)}>
+              {RELATIONSHIP_LABELS[r]}
+              <span className="ml-2 text-muted-foreground">{relCounts[r]}</span>
+            </Link>
+          ))}
+        </nav>
         <nav aria-label="Views" className="flex flex-wrap gap-2">
-          {VIEWS.map(({ key, label }) => (
-            <Link key={key} href={href({ view: key, type, q })} aria-current={view === key ? "page" : undefined} className={pill(view === key)}>
+          {VIEWS.filter(({ key }) => rel === "known" || key !== "pipeline").map(({ key, label }) => (
+            <Link key={key} href={href({ view: key, type, q, rel })} aria-current={view === key || (key === "list" && view === "pipeline" && !showBoard) ? "page" : undefined} className={pill(view === key || (key === "list" && view === "pipeline" && !showBoard))}>
               {label}
             </Link>
           ))}
@@ -112,15 +135,16 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
             </label>
             <Input id="q" name="q" type="search" defaultValue={q} placeholder="Search" className="pl-10" />
             {view !== "pipeline" ? <input type="hidden" name="view" value={view} /> : null}
+            {rel !== "known" ? <input type="hidden" name="rel" value={rel} /> : null}
             {type ? <input type="hidden" name="type" value={type} /> : null}
           </form>
           {section === "investors" && dealsView ? (
             <nav aria-label="Investor type" className="flex flex-wrap gap-2">
-              <Link href={href({ view, q })} aria-current={!type ? "true" : undefined} className={pill(!type)}>
+              <Link href={href({ view, q, rel })} aria-current={!type ? "true" : undefined} className={pill(!type)}>
                 All
               </Link>
               {INVESTOR_TYPES.map((t) => (
-                <Link key={t} href={href({ view, type: t, q })} aria-current={type === t ? "true" : undefined} className={pill(type === t)}>
+                <Link key={t} href={href({ view, type: t, q, rel })} aria-current={type === t ? "true" : undefined} className={pill(type === t)}>
                   {INVESTOR_TYPE_LABELS[t]}s
                 </Link>
               ))}
@@ -130,22 +154,28 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
       </div>
 
       {dealsView && deals.length === 0 ? (
-        <EmptyState icon={Icon} title={q || type ? "No matches" : `No ${config.noun}s yet`}>
-          {q || type ? "Try a different search or filter." : `Add your first ${config.noun} to start the pipeline.`}
+        <EmptyState icon={Icon} title={q || type ? "No matches" : rel === "known" ? `No ${config.noun}s yet` : "Nobody here"}>
+          {q || type
+            ? "Try a different search or filter."
+            : rel === "known"
+              ? `Add your first ${config.noun} to start the pipeline.`
+              : rel === "to_reach_out"
+                ? "People the research finds, and ones you add at the first stage, show up here until you reach out."
+                : "Nobody in this list right now."}
         </EmptyState>
       ) : null}
 
-      {view === "pipeline" && deals.length > 0 ? <Board section={section} deals={deals} locked={Boolean(q || type)} /> : null}
+      {showBoard && deals.length > 0 ? <Board section={section} deals={deals} locked={Boolean(q || type)} /> : null}
 
-      {view === "list" && deals.length > 0 ? (
+      {dealsView && !showBoard && deals.length > 0 ? (
         <Card className="p-2">
           <ul>
             {deals.map((deal) => {
               const stage = getStage(section, deal.stage);
               const investorType = investorTypeOf(deal.details);
               return (
-                <li key={deal.id}>
-                  <Link href={`${base}/${deal.id}`} className="flex min-h-16 flex-wrap items-center gap-x-6 gap-y-1 rounded-xl px-3 py-3 transition-colors hover:bg-accent">
+                <li key={deal.id} className="flex flex-wrap items-center gap-2">
+                  <Link href={`${base}/${deal.id}`} className="flex min-h-16 min-w-0 flex-1 basis-80 flex-wrap items-center gap-x-6 gap-y-1 rounded-xl px-3 py-3 transition-colors hover:bg-accent">
                     <span className="min-w-0 flex-1 basis-48">
                       <span className="block truncate font-medium">{deal.title}</span>
                       <span className="block truncate text-sm text-muted-foreground">
@@ -157,6 +187,13 @@ export async function SectionPage({ section, searchParams }: { section: Pipeline
                     <span className="w-28 text-sm">{stage?.label ?? deal.stage}</span>
                     <span className="w-24 text-right text-sm text-muted-foreground">{formatCents(deal.amountCents)}</span>
                   </Link>
+                  {rel !== "known" ? (
+                    <span className="flex flex-wrap gap-1 px-2 pb-2 sm:pb-0">
+                      {MOVES_FROM[rel].map((move) => (
+                        <RelationshipButton key={move} kind="deal" id={deal.id} move={move} back={back} variant="ghost" />
+                      ))}
+                    </span>
+                  ) : null}
                 </li>
               );
             })}

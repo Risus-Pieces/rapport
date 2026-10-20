@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sum } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals } from "@/db/schema";
 import type { PipelineSection } from "@/lib/sections";
@@ -10,7 +10,8 @@ export async function pipelineSnapshot(userId: string, section: PipelineSection)
   const rows = await db
     .select({ stage: deals.stage, count: count(), amount: sum(deals.amountCents) })
     .from(deals)
-    .where(and(eq(deals.userId, userId), eq(deals.section, section)))
+    // The pipeline is people you are in touch with; To reach out, On hold and Dismissed have their own lists.
+    .where(and(eq(deals.userId, userId), eq(deals.section, section), inArray(deals.relationship, ["known", "ghosted"])))
     .groupBy(deals.stage);
   return buildSnapshot(
     section,

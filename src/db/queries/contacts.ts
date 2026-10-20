@@ -1,7 +1,8 @@
-import { and, count, eq, ilike, inArray, isNotNull, isNull, max, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNotNull, isNull, max, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals, tasks, type ActivityType, type Section } from "@/db/schema";
 import { getReminder, TOUCH_TYPES, compareReminders } from "@/lib/reminders";
+import type { Relationship } from "@/lib/relationships";
 import type { ContactInput } from "@/lib/validation/contact";
 import { escapeLike } from "./util";
 
@@ -15,8 +16,8 @@ export type ContactRow = typeof contacts.$inferSelect & {
 };
 
 function withReminder<T extends ContactRow>(row: T, now: Date) {
-  // An archived contact is hidden from follow-ups, so it never shows a live reminder.
-  const priority = row.archivedAt ? null : row.priority;
+  // Reminders are for people you know: archived contacts and people not met yet never show a live one.
+  const priority = row.archivedAt || row.relationship !== "known" ? null : row.priority;
   return { ...row, reminder: getReminder(priority, row.lastTouchAt, row.createdAt, now) };
 }
 
@@ -25,7 +26,7 @@ export type ContactListItem = ReturnType<typeof withReminder<ContactRow>>;
 export async function listContacts(
   userId: string,
   section: Section | null,
-  options: { archived?: boolean; q?: string; now?: Date } = {},
+  options: { archived?: boolean; q?: string; now?: Date; relationship?: Relationship } = {},
 ): Promise<ContactListItem[]> {
   const q = options.q?.trim();
   const rows = await db
@@ -44,7 +45,12 @@ export async function listContacts(
       and(
         eq(contacts.userId, userId),
         section ? eq(contacts.section, section) : undefined,
-        options.archived ? isNotNull(contacts.archivedAt) : isNull(contacts.archivedAt),
+        // A relationship decides archiving by itself (On hold and Dismissed are the archived ones).
+        options.relationship
+          ? eq(contacts.relationship, options.relationship)
+          : options.archived
+            ? isNotNull(contacts.archivedAt)
+            : isNull(contacts.archivedAt),
         q
           ? or(
               ilike(contacts.name, `%${escapeLike(q)}%`),
@@ -119,7 +125,11 @@ export async function updateContact(userId: string, section: Section, id: string
 export async function setContactArchived(userId: string, section: Section, id: string, archived: boolean) {
   const [updated] = await db
     .update(contacts)
-    .set({ archivedAt: archived ? new Date() : null })
+    .set(
+      archived
+        ? { archivedAt: new Date(), relationship: sql`case when ${contacts.relationship} = 'dismissed' then 'dismissed' else 'on_hold' end`, relationshipAt: new Date() }
+        : { archivedAt: null, relationship: "known", relationshipAt: new Date() },
+    )
     .where(and(eq(contacts.userId, userId), eq(contacts.section, section), eq(contacts.id, id)))
     .returning({ id: contacts.id });
   return Boolean(updated);

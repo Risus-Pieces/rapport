@@ -60,6 +60,7 @@ export async function logActivity(
       dealId,
     })
     .returning();
+  // A touch (call, email, meeting, tasting) makes the person Know them: the activities_touch trigger (drizzle/0014).
   return created;
 }
 

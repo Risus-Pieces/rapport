@@ -90,11 +90,11 @@ describe.skipIf(!hasDevDb)("approving radar findings into the CRM (runs against 
     expect((await one<{ n: number }>(`select count(*)::int n from deals where user_id = $1`, [owner]))!.n).toBe(1);
   });
 
-  it("celebrities, creators and press become General contacts with high priority and no deal", async () => {
+  it("celebrities, creators and press become General contacts to reach out, with no reminder priority and no deal", async () => {
     for (const kind of ["celebrity", "creator", "media"]) {
       const res = await r.approveRadarItem(owner, await item(`Person ${kind}`, { kind }));
       expect(res).toMatchObject({ section: "general", dealId: null, companyId: null, href: `/general/${res.contactId}` });
-      expect(await one(`select section::text, priority::text from contacts where id = $1`, [res.contactId])).toEqual({ section: "general", priority: "high" });
+      expect(await one(`select section::text, priority::text, relationship from contacts where id = $1`, [res.contactId])).toEqual({ section: "general", priority: null, relationship: "to_reach_out" });
     }
   });
 

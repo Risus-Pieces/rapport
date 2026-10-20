@@ -2,13 +2,13 @@ import { BottomTabs } from "@/components/bottom-tabs";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileHeader } from "@/components/mobile-header";
 import { Sidebar } from "@/components/sidebar";
-import { radarNewCounts } from "@/db/queries/radar";
+import { newOpportunityCounts } from "@/db/queries/opportunities";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
-  const fresh = await radarNewCounts(session.user.id);
-  const counts = { "/radar": fresh.sooz + fresh.personal + fresh.career };
+  const fresh = await newOpportunityCounts(session.user.id);
+  const counts = { "/opportunities": fresh.sooz + fresh.personal + fresh.career };
   return (
     <div className="min-h-dvh md:flex">
       <a

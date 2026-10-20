@@ -6,7 +6,6 @@ import {
   createContact,
   deleteContact,
   InvalidCompanyError,
-  setContactArchived,
   updateContact,
 } from "@/db/queries/contacts";
 import { requireSession } from "@/lib/session";
@@ -51,16 +50,6 @@ export async function saveContactAction(_prev: ContactFormState, formData: FormD
   }
   refresh(savedId);
   redirect(`/general/${savedId}`);
-}
-
-export async function archiveContactAction(formData: FormData) {
-  const session = await requireSession();
-  const id = uuid.safeParse(formData.get("id"));
-  if (!id.success) return;
-  const archived = formData.get("archived") === "true";
-  await setContactArchived(session.user.id, SECTION, id.data, archived);
-  refresh(id.data);
-  redirect(archived ? "/general" : `/general/${id.data}`);
 }
 
 export async function deleteContactAction(formData: FormData) {

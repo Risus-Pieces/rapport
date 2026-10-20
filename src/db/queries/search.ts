@@ -1,8 +1,9 @@
-import { and, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@/db";
 import { contacts, deals, radarItems } from "@/db/schema";
 import { INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
-import { FEED_LABELS, kindLabel, radarHref, type Feed } from "@/lib/radar/types";
+import { opportunityHref } from "@/lib/opportunities";
+import { FEED_LABELS, PERSON_KINDS, kindLabel, type Feed } from "@/lib/radar/types";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -82,14 +83,15 @@ export async function searchRecords(userId: string, query: string): Promise<Sear
   const radarRows = await db
     .select({ id: radarItems.id, title: radarItems.title, feed: radarItems.feed, kind: radarItems.kind, status: radarItems.status })
     .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), ilike(radarItems.title, pattern)))
+    .where(and(eq(radarItems.userId, userId), ilike(radarItems.title, pattern), notInArray(radarItems.kind, [...PERSON_KINDS])))
+    .orderBy(asc(radarItems.title))
     .limit(LIMIT);
   for (const item of radarRows) {
     hits.push({
       id: `radar:${item.id}`,
       label: item.title,
-      detail: ["Radar", FEED_LABELS[item.feed as Feed] ?? item.feed, kindLabel(item.kind)].join(" · "),
-      href: radarHref(item),
+      detail: ["Opportunities", FEED_LABELS[item.feed as Feed] ?? item.feed, kindLabel(item.kind)].join(" · "),
+      href: opportunityHref(item),
     });
   }
   return hits;

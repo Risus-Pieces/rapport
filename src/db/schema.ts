@@ -51,6 +51,8 @@ const tagsColumn = () =>
     .array()
     .notNull()
     .default(sql`'{}'::text[]`);
+// To reach out / Know them / Ghosted / On hold / Dismissed (src/lib/relationships.ts).
+const relationshipColumn = () => text("relationship").notNull().default("known");
 const detailsColumn = () => jsonb("details").$type<Record<string, unknown>>().notNull().default({});
 
 export const companies = pgTable(
@@ -90,12 +92,16 @@ export const contacts = pgTable(
     details: detailsColumn(),
     tags: tagsColumn(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    relationship: relationshipColumn(),
+    relationshipAt: timestamp("relationship_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index("contacts_user_section_idx").on(t.userId, t.section),
     index("contacts_company_idx").on(t.companyId),
+    index("contacts_user_relationship_idx").on(t.userId, t.section, t.relationship),
+    check("contacts_relationship_check", sql`${t.relationship} in ('to_reach_out', 'known', 'ghosted', 'on_hold', 'dismissed')`),
   ],
 );
 
@@ -119,11 +125,15 @@ export const deals = pgTable(
     sortKey: doublePrecision("sort_key").notNull().default(0),
     details: detailsColumn(),
     tags: tagsColumn(),
+    relationship: relationshipColumn(),
+    relationshipAt: timestamp("relationship_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index("deals_user_section_status_stage_idx").on(t.userId, t.section, t.status, t.stage),
+    index("deals_user_relationship_idx").on(t.userId, t.section, t.relationship),
+    check("deals_relationship_check", sql`${t.relationship} in ('to_reach_out', 'known', 'ghosted', 'on_hold', 'dismissed')`),
     check("deals_party_check", sql`${t.companyId} is not null or ${t.contactId} is not null`),
     check("deals_section_check", sql`${t.section} <> 'general'`),
   ],
@@ -209,7 +219,8 @@ export const radarItems = pgTable(
     index("radar_items_contact_idx").on(t.contactId),
     index("radar_items_deal_idx").on(t.dealId),
     check("radar_items_feed_check", sql`${t.feed} in ('sooz', 'personal', 'career')`),
-    check("radar_items_status_check", sql`${t.status} in ('new', 'seen', 'saved', 'dismissed', 'approved')`),
+    // People are 'approved' (in the CRM); opportunities are new/seen/saved (To apply), applied, on_hold or dismissed.
+    check("radar_items_status_check", sql`${t.status} in ('new', 'seen', 'saved', 'dismissed', 'approved', 'applied', 'on_hold')`),
     check("radar_items_score_check", sql`${t.score} between 0 and 100`),
   ],
 );
@@ -261,6 +272,8 @@ export const outreach = pgTable(
     repliedAt: timestamp("replied_at", { withTimezone: true }),
     // The owner approved this person's drafts going to Gmail Drafts (set by approving the weekly shortlist).
     gmailOk: boolean("gmail_ok").notNull().default(false),
+    // Set by Try again: sends and replies dated before it belong to the earlier attempt.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

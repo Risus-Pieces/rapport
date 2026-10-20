@@ -1,0 +1,2 @@
+ALTER TABLE "radar_items" DROP CONSTRAINT "radar_items_status_check";--> statement-breakpoint
+ALTER TABLE "radar_items" ADD CONSTRAINT "radar_items_status_check" CHECK ("radar_items"."status" in ('new', 'seen', 'saved', 'dismissed', 'approved', 'applied', 'on_hold'));

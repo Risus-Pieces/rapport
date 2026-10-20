@@ -2,32 +2,37 @@
 
 Rapport is a single-owner CRM for three areas of your life: **Restaurants** (accounts you sell to), **Investors** (angels and institutions in a fundraising pipeline) and **General** (friends, family and professional contacts you want to stay in touch with).
 
-## Radar (research → approve → CRM)
+## People in the CRM, and Opportunities
 
-The **Radar** tab is the research feed that used to be a separate app (Query). Weekly research routines find people and
-opportunities and write them into four feeds: **Sooz people** (angels, celebrities and athletes, next-gen investors,
-creators and college athletes, retail buyers, press), **Sooz** (events, sampling slots, funding, resources),
-**Personal** and **Career**. Review them like an inbox (save, dismiss, notes, filters, search).
+Weekly research routines (this used to be a separate app, Query, and then the Radar tab) find people and opportunities.
 
-- **Approve** a person (one at a time) and they land in the CRM: angels and next-gen investors as an Investors angel deal
-  at Target; buyers as a Restaurants company + contact + Lead deal (a second buyer at the same store joins the same
-  deal); celebrities, creators and press as a General contact with high priority. The research (source, why, contact
-  route) is kept on the contact, and an "Added from Radar" note starts the timeline.
+- **People go straight into the CRM** as **To reach out**: angels and next-gen investors as an Investors angel deal at
+  Target; buyers as a Restaurants company + contact + Lead deal (a second buyer at the same store joins the same deal);
+  celebrities, creators and press as a General contact (no reminder until you know them). The research (source, why,
+  contact route) is kept on the contact, and an "Added from Radar" note starts the timeline.
+- **Where each person stands** (tabs on Investors, Restaurants and General): **To reach out**, **Know them** (the
+  pipeline board on Investors and Restaurants; reminders on General), **Ghosted**, **On hold**, **Dismissed**. Sending a
+  note, logging a call/email/meeting/tasting, moving a deal past its first stage, or *Advice call done* makes someone
+  *Know them*. **Ghosted** is automatic: the last follow-up went unanswered for 7 days. *Try again* puts them back in To
+  reach out for a short circling-back note. Dismissed and On hold people never get a draft, follow-up or launch ask.
+- **Opportunities** (events, sampling slots, funding, competitions, internships, programs…) have their own tab with
+  feeds Sooz / Personal / Career and **To apply** (saved ones starred), **Applied**, **On hold**, **Dismissed**. Old
+  `/radar` links redirect there.
 - **Outreach** lives on the deal or contact page: purpose (investor, ambassador, buyer, press, intro), drafts, *Open in
   Gmail* (nothing is ever sent for you), *Mark sent* (logs an email, adds a follow-up task in 5 days, moves Target →
   Intro or Lead → Contacted), follow-ups (+7 days, 3 touches max), *They replied*.
 - **Settings** holds your pitch facts (the only facts drafts use), LinkedIn connections (warm paths), a people CSV
-  import into the Radar, and a Radar CSV export.
+  import (people go straight into the CRM), and a research CSV export.
 
 ### Raise mode (This week)
 
 The **This week** page runs the $75k pre-seed raise like a small sales team, about 30 minutes a week:
 
 - **Monday shortlist**: about 4 investors and 2 buyers or cafés, each with a reason, the specific ask and a written
-  draft. Check the ones you want and press *Approve selected*; they go into the CRM and their drafts land in your
+  draft. Check the ones you want and press *Approve selected*; their drafts land in your
   **Gmail Drafts** the next morning (nothing is ever sent for you). Unchecked people are skipped for 8 weeks.
-  Candidates include Radar finds, investors you added to the CRM by hand, and anyone your General contacts can
-  introduce.
+  Candidates are To reach out investors and buyers (research finds and ones you added by hand), with anyone your
+  General contacts can introduce.
 - **First notes are advice asks** and never mention the round. After a real conversation, press **Advice call done**
   on the investor's deal: only those people get the monthly update and, when you press *We launched: start the
   raise*, the launch ask.
@@ -44,7 +49,7 @@ Six Claude desktop scheduled tasks run on the owner's Mac (they read `routines/*
 |---|---|---|
 | Sooz research | Mon ~8:00 | every `sooz-*` task in `src/lib/radar/briefs.ts` → `rr_ingest()` |
 | Outreach prep | Mon ~9:15 | builds the weekly shortlist (4 investors + 2 buyers), enriches public contacts (≤5 Apollo lookups), drafts per purpose, writes monthly updates and launch asks when due |
-| Gmail drafts | daily ~7:45 | puts approved drafts and due follow-ups into Gmail Drafts (never sends) and notices sends and replies |
+| Gmail drafts | daily ~7:45 | puts approved drafts and due follow-ups into Gmail Drafts (never sends), notices sends and replies, marks Ghosted |
 | Digest | Mon ~10:30 | `rr_digest_email()` → one email to the owner → `rr_mark_digested()` |
 | Personal & Career research | Thu ~8:00 | every `personal-*` and `career-*` task |
 | Digest | Thu ~10:30 | same digest |
@@ -53,7 +58,7 @@ Regenerate the prompts after editing briefs: `npm run routine-prompt -- research
 `outreach`, `gmail`, `digest`) > `routines/<file>.md`.
 
 **Database access for routines.** Routines connect through the Neon connector as `radar_routine`, a role that can only
-execute the `rr_*` functions (`drizzle/0003`–`0005`); it cannot read contacts, deals or auth tables. Create it in SQL,
+execute the routine-facing `rr_*` functions (grants in `drizzle/0005`, `0009`, `0010`, `0014`); it cannot read contacts, deals or auth tables. Create it in SQL,
 not through the Neon API (API roles join `neon_superuser` and can read everything), on each branch before migrating:
 `create role radar_routine login password '<random>';`.
 
