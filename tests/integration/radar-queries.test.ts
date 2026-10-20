@@ -150,8 +150,10 @@ describe.skipIf(!hasDevDb)("radar queries (runs against the Neon dev branch)", (
         { title: "Bea Buyer", kind: "buyer", dedupe_key: "buyer:bea-buyer:h-e-b" },
         { title: "Sam Star", kind: "celebrity", dedupe_key: "celebrity:sam-star:houston-texans" },
       ]);
-      expect(await q(`select i.title, o.purpose, o.linkedin_url, o.email from outreach o join radar_items i on i.id = o.radar_item_id where o.user_id = $1`, [owner])).toEqual([
-        { title: "Bea Buyer", purpose: "intro", linkedin_url: "https://www.linkedin.com/in/bea", email: "bea@heb.example" },
+      // People go straight into the CRM (approved, with an outreach row each).
+      expect(await q(`select i.title, i.status, o.purpose, o.linkedin_url, o.email from outreach o join radar_items i on i.id = o.radar_item_id where o.user_id = $1 order by i.title`, [owner])).toEqual([
+        { title: "Bea Buyer", status: "approved", purpose: "intro", linkedin_url: "https://www.linkedin.com/in/bea", email: "bea@heb.example" },
+        { title: "Sam Star", status: "approved", purpose: "ambassador", linkedin_url: null, email: null },
       ]);
     });
   });

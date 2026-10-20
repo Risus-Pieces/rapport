@@ -5,7 +5,8 @@ import { RELATIONSHIPS, type Relationship } from "@/lib/relationships";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
-type Executor = Pick<typeof db, "execute">;
+// Facts move people to Know them by themselves (drizzle/0014 triggers): a logged call/email/meeting/tasting, a send or
+// reply, or a deal moved past its first stage.
 
 /** On hold and Dismissed archive a contact (no reminders, hidden lists); anything else brings it back. */
 const archiveFor = (r: Relationship) =>
@@ -50,15 +51,4 @@ export async function relationshipCounts(userId: string, section: Section): Prom
   const counts = Object.fromEntries(RELATIONSHIPS.map((r) => [r, 0])) as Record<Relationship, number>;
   for (const row of rows) if (row.r in counts) counts[row.r as Relationship] = row.n;
   return counts;
-}
-
-/** Being in touch means you know them: To reach out / Ghosted → Know them for the contact, its deals and the deal. */
-export async function markKnown(
-  executor: Executor,
-  userId: string,
-  target: { contactId?: string | null; companyId?: string | null; dealId?: string | null },
-) {
-  await executor.execute(
-    sql`select rr_mark_known(${target.contactId ?? null}::uuid, ${target.companyId ?? null}::uuid, ${target.dealId ?? null}::uuid, ${userId})`,
-  );
 }

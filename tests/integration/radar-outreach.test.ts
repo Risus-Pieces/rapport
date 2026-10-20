@@ -220,7 +220,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
   });
 
   describe("digest", () => {
-    it("groups finds by feed and people, links to the radar, and counts outreach", async () => {
+    it("groups finds by feed, lists people added to To reach out, links to Opportunities, and counts outreach", async () => {
       await item("Angel One", { score: 80 });
       await item("Expo", { kind: "event", score: 70 });
       await item("Hack", { feed: "personal", kind: "hackathon" });
@@ -234,17 +234,18 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       await save(a.id, { body: "Hi" });
       await save(pre, { body: "Hi" });
       const d = await digest();
-      expect(d.count).toBe(4);
-      expect(d.html).toContain("Sooz — new people (1)");
+      expect(d.count).toBe(5);
+      expect(d.html).toContain("Sooz — added to To reach out (2)");
       expect(d.html).toContain("Sooz — events, funding &amp; resources (1)");
       expect(d.html).toContain("Personal (1)");
       expect(d.html).toContain("Career (1)");
-      expect(d.html).toContain('href="https://crm.example/radar"');
+      expect(d.html).toContain('href="https://crm.example/opportunities"');
+      expect(d.html).toContain(`href="https://crm.example/investors/${a.deal}"`);
       expect(d.outreach).toEqual({ drafts_ready: 1, drafts_waiting: 1, followups_due: 0, new_replies: 0, actions: 2 });
       expect(d.html).toContain("1 draft ready to send");
       expect(d.html).toContain("1 draft waiting for your approval");
       const marked = (await one<{ n: number }>(`select rr_mark_digested($1::uuid[], $2) as n`, [d.ids, owner]))!.n;
-      expect(marked).toBe(4);
+      expect(marked).toBe(5);
       expect((await digest()).count).toBe(0);
     });
 

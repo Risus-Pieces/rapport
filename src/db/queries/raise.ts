@@ -266,6 +266,18 @@ export async function setGmailOk(userId: string, itemId: string): Promise<boolea
   return rows.length > 0;
 }
 
+/** Marks people whose intro went unanswered (cadence over, 7 quiet days) as Ghosted; returns how many. */
+export async function refreshGhosted(userId: string): Promise<number> {
+  const { rows } = await db.$client.query<{ n: number }>(`select rr_refresh_ghosted($1) as n`, [userId]);
+  return rows[0].n;
+}
+
+/** Try again (only from Ghosted): back to To reach out with a fresh outreach row and a circling-back note next time. */
+export async function tryAgain(userId: string, itemId: string): Promise<boolean> {
+  const { rows } = await db.$client.query<{ ok: boolean }>(`select rr_try_again($1, $2) as ok`, [itemId, userId]);
+  return rows[0].ok;
+}
+
 export type OutreachMessage = { kind: string; period: string; status: string; subject: string | null; pushedAt: Date | null; sentAt: Date | null };
 
 export async function outreachMessages(userId: string, outreachId: string): Promise<OutreachMessage[]> {

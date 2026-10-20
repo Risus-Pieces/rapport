@@ -1,22 +1,18 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, appSettings, companies, contacts, deals, network, outreach, radarItems, radarRuns } from "@/db/schema";
-import { dedupeKey, firstFirm, slug } from "@/lib/radar/dedupe";
+import { appSettings, contacts, network, outreach, radarItems, radarRuns } from "@/db/schema";
+import { dedupeKey, slug } from "@/lib/radar/dedupe";
 import { PITCH_FIELDS, type Pitch, type PitchKey } from "@/lib/radar/drafts";
 import { EMAIL_RE, LINKEDIN_RE, companyKey, parseProspectCsv, type Connection } from "@/lib/radar/import";
 import {
   FEEDS,
   PERSON_KINDS,
-  crmHref,
-  crmTargetFor,
   defaultPurpose,
   isPurpose,
   type CrmTarget,
   type Feed,
   type RadarDetails,
 } from "@/lib/radar/types";
-import { checkInvestorParties, compactDetails, firstStage } from "@/lib/sections";
-import { nextSortKey, type Tx } from "./deals";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -37,183 +33,24 @@ function approval(section: CrmTarget, contactId: string, companyId: string | nul
   return { section, contactId, companyId, dealId, href };
 }
 
-const sameName = (column: typeof contacts.name | typeof companies.name, name: string) =>
-  sql`lower(${column}) = lower(${name})`;
-
-async function findContact(tx: Tx, userId: string, section: CrmTarget, name: string) {
-  const [row] = await tx
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(and(eq(contacts.userId, userId), eq(contacts.section, section), isNull(contacts.archivedAt), sameName(contacts.name, name)))
-    .limit(1);
-  return row?.id ?? null;
-}
-
-async function openDeal(tx: Tx, userId: string, where: { contactId?: string; companyId?: string }) {
-  const [row] = await tx
-    .select({ id: deals.id })
-    .from(deals)
-    .where(
-      and(
-        eq(deals.userId, userId),
-        eq(deals.status, "open"),
-        where.contactId ? eq(deals.contactId, where.contactId) : undefined,
-        where.companyId ? eq(deals.companyId, where.companyId) : undefined,
-      ),
-    )
-    .limit(1);
-  return row?.id ?? null;
-}
-
 /**
- * Approve one finding: the person lands in the CRM section their kind belongs to (angels and
- * next-gen investors → Investors angel deal; buyers → Restaurants company, contact and Lead deal;
- * celebrities, creators and press → General contact). Idempotent under a row lock, and a same-name
- * contact (or a buyer's existing company and open deal) is reused rather than duplicated.
+ * Approve one finding: the person lands in the CRM section their kind belongs to, as To reach out (angels and
+ * next-gen investors → Investors angel deal; buyers → Restaurants company, contact and Lead deal; celebrities,
+ * creators and press → General contact). The work is rr_approve_item (drizzle/0014), which research ingest uses too.
  */
 export async function approveRadarItem(userId: string, itemId: string): Promise<Approval> {
-  return db.transaction(async (tx) => {
-    const [item] = await tx
-      .select()
-      .from(radarItems)
-      .where(and(eq(radarItems.userId, userId), eq(radarItems.id, itemId)))
-      .for("update");
-    if (!item) throw new RadarError("That finding no longer exists.");
-    const section = item.feed === "sooz" ? crmTargetFor(item.kind) : null;
-    if (!section) throw new RadarError("Only people can be added to the CRM.");
-    // Still in the CRM: nothing to do. If its contact or pipeline card was deleted since, approve again
-    // (an orphaned contact is found by name and reused).
-    if (item.status === "approved" && item.contactId && crmHref(item)) {
-      return approval(section, item.contactId, item.companyId, item.dealId);
-    }
-
-    const d = item.details as RadarDetails;
-    const firm = firstFirm(d.firm);
-    const [draft] = await tx
-      .select({ email: outreach.email, linkedinUrl: outreach.linkedinUrl })
-      .from(outreach)
-      .where(eq(outreach.radarItemId, item.id));
-    const radar = compactDetails({
-      radarItemId: item.id,
-      kind: item.kind,
-      sourceUrl: item.url,
-      whyRelevant: item.whyRelevant,
-      contactPath: d.contact_path,
-      riceConnection: d.rice_connection,
-      checkSize: d.check_size,
-      firm: d.firm,
-    });
-    const person = {
-      userId,
-      section,
-      name: item.title,
-      email: draft?.email ?? null,
-      linkedinUrl: draft?.linkedinUrl ?? null,
-      tags: item.tags.slice(0, 20),
-    };
-
-    let companyId: string | null = null;
-    let contactId = await findContact(tx, userId, section, item.title);
-    let dealId: string | null = null;
-
-    if (section === "restaurants") {
-      const companyName = firm ?? item.title;
-      const [company] = await tx
-        .select({ id: companies.id })
-        .from(companies)
-        .where(
-          and(
-            eq(companies.userId, userId),
-            eq(companies.section, "restaurants"),
-            isNull(companies.archivedAt),
-            sameName(companies.name, companyName),
-          ),
-        )
-        .limit(1);
-      companyId =
-        company?.id ??
-        (await tx.insert(companies).values({ userId, section, name: companyName }).returning({ id: companies.id }))[0].id;
-      if (contactId) {
-        // A buyer whose restaurant was deleted keeps the contact without a company: re-attach it.
-        await tx
-          .update(contacts)
-          .set({ companyId })
-          .where(and(eq(contacts.id, contactId), isNull(contacts.companyId)));
-      }
-      contactId ??= (
-        await tx
-          .insert(contacts)
-          .values({ ...person, companyId, title: d.role ?? null, details: { radar } })
-          .returning({ id: contacts.id })
-      )[0].id;
-      dealId = await openDeal(tx, userId, { companyId });
-      if (!dealId) {
-        const stage = firstStage("restaurants").key;
-        dealId = (
-          await tx
-            .insert(deals)
-            .values({ userId, section, companyId, title: companyName, stage, sortKey: await nextSortKey(tx, userId, "restaurants", stage) })
-            .returning({ id: deals.id })
-        )[0].id;
-      }
-    } else {
-      const title = [d.role, d.firm].filter(Boolean).join(" · ") || null;
-      contactId ??= (
-        await tx
-          .insert(contacts)
-          .values({
-            ...person,
-            title,
-            priority: section === "general" ? "high" : null,
-            details: section === "investors" ? { background: item.summary, radar } : { radar },
-          })
-          .returning({ id: contacts.id })
-      )[0].id;
-      if (section === "investors") {
-        const problem = checkInvestorParties("angel", { companyId: null, contactId });
-        if (problem) throw new RadarError(problem);
-        dealId = await openDeal(tx, userId, { contactId });
-        if (!dealId) {
-          const stage = firstStage("investors").key;
-          dealId = (
-            await tx
-              .insert(deals)
-              .values({
-                userId,
-                section,
-                contactId,
-                title: item.title,
-                stage,
-                details: { investorType: "angel" },
-                sortKey: await nextSortKey(tx, userId, "investors", stage),
-              })
-              .returning({ id: deals.id })
-          )[0].id;
-        }
-      }
-    }
-
-    await tx.insert(activities).values({
-      userId,
-      type: "note",
-      summary: "Added from Radar",
-      body: [item.summary, item.url ? `Source: ${item.url}` : null].filter(Boolean).join("\n\n") || null,
-      contactId,
-      companyId,
-      dealId,
-    });
-    await tx
-      .update(radarItems)
-      .set({ status: "approved", contactId, companyId, dealId })
-      .where(eq(radarItems.id, item.id));
-    // Every approved person gets an outreach row, so the record page shows the outreach panel at once.
-    await tx
-      .insert(outreach)
-      .values({ userId, radarItemId: item.id, purpose: defaultPurpose(item.kind) })
-      .onConflictDoNothing({ target: outreach.radarItemId });
-    await tx.update(outreach).set({ contactId, dealId }).where(eq(outreach.radarItemId, item.id));
-    return approval(section, contactId, companyId, dealId);
-  });
+  let r: { section: CrmTarget; contact_id: string; company_id: string | null; deal_id: string | null };
+  try {
+    const { rows } = await db.$client.query<{ r: typeof r }>(`select rr_approve_item($1, $2) as r`, [itemId, userId]);
+    r = rows[0].r;
+  } catch (error) {
+    const e = error as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+    const pg = e.code ? e : e.cause;
+    if (pg?.code === "RR001") throw new RadarError(pg.message ?? "Could not add to the CRM.");
+    if (pg?.code === "22P02") throw new RadarError("That finding no longer exists.");
+    throw error;
+  }
+  return approval(r.section, r.contact_id, r.company_id, r.deal_id);
 }
 
 // --- Listing ---------------------------------------------------------------------------------

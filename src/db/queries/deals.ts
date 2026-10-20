@@ -12,7 +12,6 @@ import {
   type PipelineSection,
 } from "@/lib/sections";
 import type { InvestorInput, RestaurantInput } from "@/lib/validation/deal";
-import { markKnown } from "./relationships";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -235,10 +234,6 @@ export async function moveDeal(userId: string, id: string, stageKey: string, sor
     .where(and(eq(deals.userId, userId), eq(deals.id, id)))
     .returning();
   if (updated && sortKey !== undefined) await renumberIfCrowded(userId, updated.section as PipelineSection, updated.stage);
-  if (updated && updated.stage !== firstStage(updated.section as PipelineSection).key) {
-    await markKnown(db, userId, { contactId: updated.contactId, dealId: updated.id });
-    return (await db.select().from(deals).where(and(eq(deals.userId, userId), eq(deals.id, id))))[0] ?? null;
-  }
   return updated ?? null;
 }
 
@@ -279,10 +274,6 @@ async function applyDealFacts(tx: Tx, userId: string, deal: typeof deals.$inferS
     })
     .where(and(eq(deals.userId, userId), eq(deals.id, deal.id)))
     .returning();
-  // Moving past the first stage means you are in touch.
-  if (updated && updated.stage !== firstStage(deal.section as PipelineSection).key) {
-    await markKnown(tx, userId, { contactId: updated.contactId, dealId: updated.id });
-  }
   return updated;
 }
 

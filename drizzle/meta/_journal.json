@@ -99,6 +99,13 @@
       "when": 1792469812517,
       "tag": "0013_relationships_sql",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792470336904,
+      "tag": "0014_crm_people",
+      "breakpoints": true
     }
   ]
 }
