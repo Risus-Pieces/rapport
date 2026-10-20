@@ -194,4 +194,31 @@ describe.skipIf(!hasDevDb)("people in the CRM (runs against the Neon dev branch)
       expect(await one<{ n: number }>(`select rr_sync_crm_investors($1) as n`, [owner])).toEqual({ n: 0 });
     });
   });
+
+  describe("moving the Radar's people into the CRM", () => {
+    it("adds every Sooz person still waiting in the Radar, once; dismissals and opportunities stay as they are", async () => {
+      const raw = (title: string, kind: string, status: string) =>
+        q(`insert into radar_items (user_id, feed, kind, title, url, score, status, dedupe_key) values ($1, 'sooz', $2, $3, 'https://x.com/' || $4, 70, $5, $4)`,
+          [owner, kind, title, slug(title), status]);
+      await raw("New Angel", "angel", "new");
+      await raw("Seen Creator", "creator", "seen");
+      await raw("Saved Buyer", "buyer", "saved");
+      await raw("Gone Angel", "angel", "dismissed");
+      await raw("Some Expo", "event", "new");
+      expect(await one(`select rr_move_radar_people($1) as n`, [owner])).toEqual({ n: 3 });
+      expect(await one(`select rr_move_radar_people($1) as n`, [owner])).toEqual({ n: 0 });
+      const rows = await q<{ title: string; status: string; in_crm: boolean }>(
+        `select title, status, contact_id is not null as in_crm from radar_items where user_id = $1 order by title`, [owner]);
+      expect(rows).toEqual([
+        { title: "Gone Angel", status: "dismissed", in_crm: false },
+        { title: "New Angel", status: "approved", in_crm: true },
+        { title: "Saved Buyer", status: "approved", in_crm: true },
+        { title: "Seen Creator", status: "approved", in_crm: true },
+        { title: "Some Expo", status: "new", in_crm: false },
+      ]);
+      expect(await rel.relationshipCounts(owner, "investors")).toMatchObject({ to_reach_out: 1 });
+      expect(await rel.relationshipCounts(owner, "restaurants")).toMatchObject({ to_reach_out: 1 });
+      expect(await rel.relationshipCounts(owner, "general")).toMatchObject({ to_reach_out: 1 });
+    });
+  });
 });

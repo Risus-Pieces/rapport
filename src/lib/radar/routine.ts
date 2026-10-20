@@ -80,7 +80,7 @@ You may run the tasks below in parallel with general-purpose subagents, at most 
 ${FINDING_FIELDS}
    For people, \`title\` is ONE person's full name and \`details\` carries firm, role, rice_connection (only if a source states it), check_size (only if a source states it) and contact_path (the most credible PUBLIC route). Use null for unknowns. Add tag "rice" only for confirmed Rice University alumni or students.
 3. Call shape (b) once per task with that task's feed, id, allowed kinds and upcoming_only flag. The JSON goes inside \`$oq$ ... $oq$\` (if your JSON ever contains the text $oq$, use \`$oq2$\` for both delimiters). The JSON must be valid (double quotes, no trailing commas, escape inner quotes).
-4. Read the result. \`rejected\` lists findings the database refused, with reasons; if a rejection is a fixable formatting problem (e.g. bad date), fix and resubmit just those once. If the call fails with a JSON/SQL syntax error, fix the JSON and retry once. If a task still fails, record the error and continue with the next task.
+4. Read the result. People you submit go straight into the owner's CRM as To reach out (\`added_to_crm\` counts them), so only submit people worth contacting. \`rejected\` lists findings the database refused, with reasons; if a rejection is a fixable formatting problem (e.g. bad date), fix and resubmit just those once. If the call fails with a JSON/SQL syntax error, fix the JSON and retry once. If a task still fails, record the error and continue with the next task.
 
 ## Context
 ${feeds.map((x) => `- Feed \`${x}\`: ${oneLine(PROFILES[x])}`).join("\n")}
@@ -89,7 +89,7 @@ ${feeds.map((x) => `- Feed \`${x}\`: ${oneLine(PROFILES[x])}`).join("\n")}
 ${tasks.map(taskBlock).join("\n\n")}
 
 ## Finish
-Do NOT send any email (a separate routine handles the digest). End with a short report: for each task, how many findings you submitted, and the inserted/updated/rejected counts from rr_ingest, plus any task that failed and why. Keep it under 25 lines.`;
+Do NOT send any email (a separate routine handles the digest). End with a short report: for each task, how many findings you submitted, and the inserted/updated/added_to_crm/rejected counts from rr_ingest, plus any task that failed and why. Keep it under 25 lines.`;
 }
 
 export function buildDigestRoutinePrompt(
@@ -166,6 +166,7 @@ Do not use Gmail or any other connector in this job. Never use Apollo sequences,
    - LinkedIn: if linkedin_url is null, WebSearch "<name> <firm> linkedin". Accept a https://www.linkedin.com/in/... URL only if the result clearly shows the same name AND the same firm or role.
    - Email: follow rule 6. Apollo goes to shortlisted people first.
    - Warm path: if network_matches is non-empty, set warm_path to e.g. "You know Sam Lee (via your contact) at Acme Ventures — ask for an intro".
+   - If retry is true, this person was emailed before and never replied, and the owner chose to try again: write a short circling-back note instead (a new subject, not a reply; body 50–90 words: acknowledge writing before without guilt-tripping, one fresh, specific reason to talk now from pitch facts, the same small ask). Keep followup_1 to one sentence and leave followup_2 empty.
    - Drafts (skip if rule 3 says so), built around the shortlist ask:
      • subject: specific, under 70 characters. • body: 80–140 words: greeting with first name; one sentence on why THIS person; who the owner is (pitch.sender_name, pitch.sender_title, pitch.company + pitch.one_liner); traction only from pitch.traction; the one ask; sign-off. Plain text, no links except pitch.calendar_url. • linkedin_note: under 280 characters. • intro_request: only if warm_path names someone the owner knows. • followup_1 (day 5): 2–3 polite sentences. followup_2 (day 12): a gracious last note.
    - Save with (e).
@@ -179,7 +180,7 @@ export function buildGmailRoutinePrompt(): string {
 You put the owner's approved outreach drafts into their Gmail Drafts folder and notice when they send them or get replies. You NEVER send anything.
 
 ## Tools you may use
-- Neon \`run_sql\` with ${CONN} — ONLY the six statements below.
+- Neon \`run_sql\` with ${CONN} — ONLY the seven statements below.
 - Gmail: \`create_draft\` (to create each draft), and the read-only tools \`list_drafts\`, \`get_draft\`, \`search_threads\` and \`get_thread\` (to check what happened).
 Never call Gmail send_message, never update or delete a draft, never label, archive or trash anything. Do not use any other tool or connector.
 
@@ -192,6 +193,7 @@ Never call Gmail send_message, never update or delete a draft, never label, arch
    d. \`select rr_outreach_observe('<radar_item_id>', '<sent|replied>', '<ISO timestamp>') as r\`
    e. \`select rr_gmail_todo() as t\`
    f. \`select rr_gmail_record('<key>', '<draft id>', '<thread id>') as r\`
+   g. \`select rr_refresh_ghosted() as n\`
 3. Only create drafts addressed to the \`to\` address of a message from (e), with its subject and body verbatim. One draft per message key.
 4. Account check (required): (e) returns sender_email. Work out which Gmail account the connector uses (for example the From address of the newest message in search_threads "in:sent"). If it is not sender_email, or sender_email is empty, create nothing and report why. If you cannot determine the account, create nothing and report that.
 
@@ -203,5 +205,6 @@ Never call Gmail send_message, never update or delete a draft, never label, arch
    - stage "drafted": search_threads "to:<email> newer_than:45d in:sent". If a sent message is found, run (d) with 'sent' and its date.
    - stage "drafted" or "sent": search_threads "from:<email> newer_than:60d". If found, run (d) with 'replied' and its date.
 3. Run (e). Do the account check (rule 4). Before creating each draft, list_drafts (or search) for an existing draft to the same address with the same subject: if one exists, do not create another — run (f) with that draft's id and thread id instead. Otherwise create a Gmail draft (to, subject, body as plain text); if thread_id is set and the tool can create the draft as a reply in that thread, do so, otherwise create a new draft with the subject as given. Then immediately run (f) with the message key and the draft id and thread id the tool returned (use '' for an unknown thread id). If (f) returns 'exists', report it so the owner can delete the duplicate. If creating a draft fails, skip it.
-4. Report (under 10 lines): sends and replies detected, drafts created, and anything skipped with the reason.`;
+4. Run (g). It marks people whose intro went unanswered for a week after the last follow-up as Ghosted in the CRM (the owner can Try again from there); report the number.
+5. Report (under 10 lines): sends and replies detected, drafts created, people marked Ghosted, and anything skipped with the reason.`;
 }

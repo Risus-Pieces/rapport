@@ -44,6 +44,7 @@ Do not use Gmail or any other connector in this job. Never use Apollo sequences,
    - LinkedIn: if linkedin_url is null, WebSearch "<name> <firm> linkedin". Accept a https://www.linkedin.com/in/... URL only if the result clearly shows the same name AND the same firm or role.
    - Email: follow rule 6. Apollo goes to shortlisted people first.
    - Warm path: if network_matches is non-empty, set warm_path to e.g. "You know Sam Lee (via your contact) at Acme Ventures — ask for an intro".
+   - If retry is true, this person was emailed before and never replied, and the owner chose to try again: write a short circling-back note instead (a new subject, not a reply; body 50–90 words: acknowledge writing before without guilt-tripping, one fresh, specific reason to talk now from pitch facts, the same small ask). Keep followup_1 to one sentence and leave followup_2 empty.
    - Drafts (skip if rule 3 says so), built around the shortlist ask:
      • subject: specific, under 70 characters. • body: 80–140 words: greeting with first name; one sentence on why THIS person; who the owner is (pitch.sender_name, pitch.sender_title, pitch.company + pitch.one_liner); traction only from pitch.traction; the one ask; sign-off. Plain text, no links except pitch.calendar_url. • linkedin_note: under 280 characters. • intro_request: only if warm_path names someone the owner knows. • followup_1 (day 5): 2–3 polite sentences. followup_2 (day 12): a gracious last note.
    - Save with (e).

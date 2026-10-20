@@ -24,6 +24,8 @@ describe("routine prompts", () => {
     expect(p).toContain("select rr_known_titles('<feed>') as titles");
     expect(p).toContain("select rr_ingest('<feed>', '<task id>', array['<kind>', ...], <true|false>, $oq$<JSON array>$oq$::jsonb) as result");
     expect(p).toContain("The ONLY SQL you may run is these two shapes");
+    expect(p).toMatch(/People you submit go straight into the owner's CRM as To reach out/);
+    expect(p).toContain("added_to_crm");
   });
 
   it("research: Thursday covers Personal and Career, with context for both", () => {
@@ -68,6 +70,8 @@ describe("routine prompts", () => {
     expect(p).toContain("reveal_personal_emails=false, no phone, no waterfall");
     expect(p).toMatch(/employer matches/);
     expect(p).toMatch(/nextgen[^\n]*only a business or management contact/);
+    // Try again: someone who went quiet gets a short note that circles back, not a cold introduction.
+    expect(p).toMatch(/retry is true[^\n]*circling-back note/);
   });
 
   it("gmail (daily): only creates drafts and watches; never sends; checks the account", () => {
@@ -90,6 +94,9 @@ describe("routine prompts", () => {
     expect(p).toContain("select rr_outreach_watch() as watch");
     expect(p).toContain("select rr_outreach_observe('<radar_item_id>', '<sent|replied>', '<ISO timestamp>') as r");
     expect(p).toMatch(/If you cannot determine the account, create nothing/);
+    // Ghosted after the cadence ends; checked after watching for replies.
+    expect(p).toContain("select rr_refresh_ghosted() as n");
+    expect(p.indexOf("select rr_gmail_watch() as w")).toBeLessThan(p.lastIndexOf("rr_refresh_ghosted"));
   });
 
   it("digest: only to the owner, links into Rapport", () => {
