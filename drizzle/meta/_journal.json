@@ -85,6 +85,20 @@
       "when": 1792453032917,
       "tag": "0011_raise_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792469810710,
+      "tag": "0012_relationships",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792469812517,
+      "tag": "0013_relationships_sql",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals, type ActivityType } from "@/db/schema";
+import { TOUCH_TYPES } from "@/lib/reminders";
+import { markKnown } from "./relationships";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
@@ -60,6 +62,8 @@ export async function logActivity(
       dealId,
     })
     .returning();
+  // A real touch means you know them now, so no cold first note follows.
+  if ((TOUCH_TYPES as readonly string[]).includes(input.type)) await markKnown(db, userId, { contactId, companyId, dealId });
   return created;
 }
 
