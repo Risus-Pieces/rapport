@@ -24,10 +24,18 @@ describe("research tasks", () => {
   it("has a dedicated, deeper pitch-competition search for Sooz", () => {
     const t = TASKS.find((x) => x.id === "sooz-pitch-competitions")!;
     expect(t).toMatchObject({ feed: "sooz", kinds: ["funding", "event"], upcomingOnly: true });
-    expect(t.maxSearches).toBeGreaterThanOrEqual(18);
+    expect(t.maxSearches).toBeGreaterThanOrEqual(30);
     expect(t.brief).toMatch(/tag "pitch-competition"/);
     expect(t.brief).toMatch(/prize/);
     expect(t.brief).toMatch(/next cycle/);
+    // Anywhere in the U.S., found by who can enter (young / student founders), under every name these go by.
+    expect(t.brief).toMatch(/anywhere in the United States/);
+    expect(t.brief).toMatch(/under 30/);
+    expect(t.brief).toMatch(/summit/);
+    expect(t.brief).toMatch(/past winners/);
+    expect(t.brief).toMatch(/WATCHLIST/);
+    expect(t.brief).toMatch(/SEEDS/);
+    expect(t.brief).not.toMatch(/Houston\/Texas or virtual/);
   });
   it("keeps job in Career only", () => {
     expect(KINDS.personal).not.toContain("job");

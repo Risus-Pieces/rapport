@@ -23,7 +23,8 @@ describe("routine prompts", () => {
     }
     expect(p).toContain("select rr_known_titles('<feed>') as titles");
     expect(p).toContain("select rr_ingest('<feed>', '<task id>', array['<kind>', ...], <true|false>, $oq$<JSON array>$oq$::jsonb) as result");
-    expect(p).toContain("The ONLY SQL you may run is these two shapes");
+    expect(p).toContain("The ONLY SQL you may run is these three shapes");
+    expect(p).toContain("select rr_competition_watch() as watch");
     expect(p).toMatch(/People you submit go straight into the owner's CRM as To reach out/);
     expect(p).toContain("added_to_crm");
   });
