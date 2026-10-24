@@ -117,9 +117,9 @@ only if stated, and a public contact_path. Never submit a group as an item; find
     upcomingOnly: true,
     maxSearches: 12,
     brief: `Find upcoming CPG and food & beverage industry events a pre-seed brand should attend or apply to:
-trade shows and expos (natural/specialty food, beverage, retail), retailer pitch days / buyer meetings,
-CPG founder conferences, food-tech and food-innovation summits, distributor and broker showcases, and
-food/bev pitch competitions. Prefer events in the next 6 months; include region, price/application notes in
+trade shows and expos (natural/specialty food, beverage, retail), retailer buyer meetings,
+CPG founder conferences, food-tech and food-innovation summits, and distributor and broker showcases (pitch
+competitions have their own task). Prefer events in the next 6 months; include region, price/application notes in
 summary, and an application or registration deadline when one exists. Use kind "event".`,
   },
   {
@@ -130,10 +130,47 @@ summary, and an application or registration deadline when one exists. Use kind "
     upcomingOnly: true,
     maxSearches: 12,
     brief: `Find upcoming fundraising-related opportunities for a pre-seed startup raising angel money:
-investor meetups and angel-group pitch nights, demo days, startup pitch competitions (esp. consumer / food /
-Texas / Rice-affiliated, e.g. Rice Business Plan Competition), fundraising workshops, and general startup
-networking events where angels attend. Use kind "event" for events and kind "funding" for applications with a
-deadline (accelerators, pitch-competition applications, non-dilutive grants). Include deadline dates.`,
+investor meetups and angel-group pitch nights, demo days, fundraising workshops, and general startup networking events
+where angels attend (pitch competitions have their own task; include one here only if you happen to find it). Use kind
+"event" for events and kind "funding" for applications with a deadline (accelerators, non-dilutive grants). Include
+deadline dates.`,
+  },
+  {
+    id: "sooz-pitch-competitions",
+    feed: SOOZ,
+    label: "Pitch competitions",
+    kinds: ["funding", "event"],
+    upcomingOnly: true,
+    maxSearches: 20,
+    brief: `Be exhaustive: find every pitch competition, venture competition, business-plan competition and pitch slot Sooz
+could enter in the next 9 months. They are scattered across small sites, so search from many angles rather than a few
+broad queries, and open listing pages to pull out the individual competitions:
+- Food, beverage & CPG: trade-show and industry pitch slams (e.g. BevNET / NOSH Live Pitch Slam, Naturally Network
+  chapter pitch nights such as Naturally Austin), natural-products and specialty-food expo startup pitches, retailer and
+  distributor "emerging brand" pitch days, food-innovation and food-tech challenges, corporate beverage and food company
+  startup challenges.
+- Student founders (the founder is a Rice undergraduate): Rice Business Plan Competition and Rice Alliance events, Rice
+  and Houston campus competitions, intercollegiate venture and business-plan competitions that accept undergraduates from
+  any school (in Texas and nationally, including virtual ones), the Hult Prize, and university-hosted competitions with a
+  consumer or social-impact track.
+- Houston and Texas: Houston Exponential, The Ion and other Houston innovation-hub pitch nights, Austin and Dallas startup
+  weeks and pitch events, chamber of commerce and city small-business pitch contests.
+- Founder-identity, impact and general: competitions for young, student, women or minority founders, social-impact and
+  sustainability prizes, startup-week and conference pitch competitions, and investor-network pitch events open to
+  pre-revenue consumer startups (virtual counts).
+- Listing sources to mine: university entrepreneurship-center calendars, collegiate business-plan competition
+  directories, startup-week schedules, Luma and Eventbrite searches for "pitch competition" (Houston, Austin, Dallas,
+  virtual), accelerator and incubator newsletters, and recent "winners announced" articles (they reveal competitions
+  that run every year).
+Pre-revenue and pre-launch eligibility matters: skip competitions that require revenue, a Series A, or a product already
+on shelves, and say "pre-revenue OK" in summary when the rules allow it. One competition per item, titled with its name
+and year. In summary give the prize (cash or in-kind) when stated, the stage and eligibility rules, the format (in person
+where, or virtual) and the key dates. Put the application deadline in deadline and the pitch-day date in event_date.
+Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch nights you just
+sign up for, and always add tag "pitch-competition". If a competition runs every year but its next cycle is not announced
+yet, submit it with null dates and say in summary when it ran last time and when applications usually open. Score higher
+for food/beverage/consumer focus, student eligibility, Houston/Texas or virtual, real prize money or investor judges, and
+deadlines within three months.`,
   },
   {
     id: "sooz-resources",
