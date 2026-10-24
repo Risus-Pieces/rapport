@@ -37,6 +37,12 @@ describe("routine prompts", () => {
     expect(p).toContain("Feed `career`");
   });
 
+  it("research: waits for every subagent (foreground) and never ends the turn before all tasks are ingested", () => {
+    const p = buildResearchRoutinePrompt(["sooz"]);
+    expect(p).toContain("run_in_background: false");
+    expect(p).toMatch(/Do not end your turn until every task has been ingested/);
+  });
+
   it("research: subagents only search; the routine alone ingests; same hard rules", () => {
     const p = buildResearchRoutinePrompt(["sooz"]);
     expect(p).toContain("at most 4 at a time");
