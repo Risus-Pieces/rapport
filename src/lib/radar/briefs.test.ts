@@ -21,6 +21,14 @@ describe("research tasks", () => {
   it("looks for Houston cafés and coffee shops as buyers (pre-launch proof)", () => {
     expect(TASKS.find((t) => t.id === "sooz-buyers")!.brief).toMatch(/cafés, coffee shops and specialty stores/);
   });
+  it("has a dedicated, deeper pitch-competition search for Sooz", () => {
+    const t = TASKS.find((x) => x.id === "sooz-pitch-competitions")!;
+    expect(t).toMatchObject({ feed: "sooz", kinds: ["funding", "event"], upcomingOnly: true });
+    expect(t.maxSearches).toBeGreaterThanOrEqual(18);
+    expect(t.brief).toMatch(/tag "pitch-competition"/);
+    expect(t.brief).toMatch(/prize/);
+    expect(t.brief).toMatch(/next cycle/);
+  });
   it("keeps job in Career only", () => {
     expect(KINDS.personal).not.toContain("job");
     expect(KINDS.career).toContain("job");
