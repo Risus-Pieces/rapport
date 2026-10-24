@@ -134,6 +134,13 @@
       "when": 1792472617717,
       "tag": "0018_review_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792884910839,
+      "tag": "0019_competition_watch",
+      "breakpoints": true
     }
   ]
 }

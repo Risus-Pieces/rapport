@@ -33,6 +33,7 @@ describe.skipIf(!hasDevDb)("radar_routine role (runs against the Neon dev branch
     "rr_update_todo(date, text)",
     "rr_launch_todo(text)",
     "rr_refresh_ghosted(text)",
+    "rr_competition_watch(text)",
   ];
   const APP_ONLY = [
     "rr_outreach_record(uuid, text, timestamp with time zone, text)",

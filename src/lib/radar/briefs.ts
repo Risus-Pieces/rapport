@@ -141,36 +141,43 @@ deadline dates.`,
     label: "Pitch competitions",
     kinds: ["funding", "event"],
     upcomingOnly: true,
-    maxSearches: 20,
-    brief: `Be exhaustive: find every pitch competition, venture competition, business-plan competition and pitch slot Sooz
-could enter in the next 9 months. They are scattered across small sites, so search from many angles rather than a few
-broad queries, and open listing pages to pull out the individual competitions:
-- Food, beverage & CPG: trade-show and industry pitch slams (e.g. BevNET / NOSH Live Pitch Slam, Naturally Network
-  chapter pitch nights such as Naturally Austin), natural-products and specialty-food expo startup pitches, retailer and
-  distributor "emerging brand" pitch days, food-innovation and food-tech challenges, corporate beverage and food company
-  startup challenges.
-- Student founders (the founder is a Rice undergraduate): Rice Business Plan Competition and Rice Alliance events, Rice
-  and Houston campus competitions, intercollegiate venture and business-plan competitions that accept undergraduates from
-  any school (in Texas and nationally, including virtual ones), the Hult Prize, and university-hosted competitions with a
-  consumer or social-impact track.
-- Houston and Texas: Houston Exponential, The Ion and other Houston innovation-hub pitch nights, Austin and Dallas startup
-  weeks and pitch events, chamber of commerce and city small-business pitch contests.
-- Founder-identity, impact and general: competitions for young, student, women or minority founders, social-impact and
-  sustainability prizes, startup-week and conference pitch competitions, and investor-network pitch events open to
-  pre-revenue consumer startups (virtual counts).
-- Listing sources to mine: university entrepreneurship-center calendars, collegiate business-plan competition
-  directories, startup-week schedules, Luma and Eventbrite searches for "pitch competition" (Houston, Austin, Dallas,
-  virtual), accelerator and incubator newsletters, and recent "winners announced" articles (they reveal competitions
-  that run every year).
+    maxSearches: 35,
+    brief: `Be exhaustive: find every pitch competition, venture or business-plan competition, pitch night and prize Sooz could
+enter in the next 9 months, anywhere in the United States (in person anywhere in the U.S., or virtual; region does not
+matter, but skip ones outside the U.S.). Many of the best ones are small, run once a year, and are not called a
+"competition" at all, so search from many angles:
+- By who can enter, not by industry: the founder is a Rice University undergraduate under 30 with a pre-revenue,
+  pre-launch consumer brand. Search phrases like "pitch competition founders under 30", "young founders pitch",
+  "student founders pitch competition", "college entrepreneurs competition", "Gen Z founders", "youth entrepreneurship
+  summit pitch", "undergraduate venture competition open to all universities", "pre-revenue startup pitch prize".
+- Under every name these go by: pitch competition, pitch night, pitch-off, pitch slam, shark-tank style, startup
+  showcase, demo day, summit or conference with a pitch competition, venture / idea / startup / innovation challenge,
+  business-plan competition, founder prize, grant competition, fast pitch.
+- Industry and topic ones too: consumer, food & beverage, CPG, health and wellness, sustainability and social-impact
+  competitions, and corporate-sponsored challenges.
+- Directories and listings: Devpost and F6S open calls (non-software ones count), Collegiate Entrepreneurs' Organization
+  events, Opportunity Desk / Youth Opportunities style roundups, ProFellow, university entrepreneurship-center calendars
+  across the country, intercollegiate competition directories, startup-week schedules, Luma and Eventbrite searches for
+  "pitch competition" (nationwide and virtual), accelerator and incubator newsletters, and "applications open" posts.
+- Follow the circuit: for competitions you find, open their past winners, finalists, judges and sponsors pages, then
+  search what else those winners won ("winner of", "finalist at", "placed at") and which other competitions the sponsors
+  and organizers run. Student founders list every competition they won on their sites and LinkedIn, which reveals the
+  small one-off competitions directories miss.
+- WATCHLIST (given to you with this task): competitions already in the database whose last cycle is over or that have no
+  dates. Check each one whose usual month is within the next three months or unknown (up to 15 per run): if its next
+  cycle is announced, submit it as a new finding titled with the new year, with the new dates. Do not resubmit a
+  cycle that has not been announced.
+- SEEDS (given to you with this task): competitions the owner saved, applied to or added by hand. Search for
+  competitions like each seed (same audience, format and size), and follow each seed's winners, judges and sponsors.
 Pre-revenue and pre-launch eligibility matters: skip competitions that require revenue, a Series A, or a product already
 on shelves, and say "pre-revenue OK" in summary when the rules allow it. One competition per item, titled with its name
-and year. In summary give the prize (cash or in-kind) when stated, the stage and eligibility rules, the format (in person
-where, or virtual) and the key dates. Put the application deadline in deadline and the pitch-day date in event_date.
-Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch nights you just
-sign up for, and always add tag "pitch-competition". If a competition runs every year but its next cycle is not announced
-yet, submit it with null dates and say in summary when it ran last time and when applications usually open. Score higher
-for food/beverage/consumer focus, student eligibility, Houston/Texas or virtual, real prize money or investor judges, and
-deadlines within three months.`,
+and year. In summary give the prize (cash or in-kind) when stated, who can enter (age, student status, stage), the
+format (in person where, or virtual) and the key dates. Put the application deadline in deadline and the pitch-day date
+in event_date. Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch
+nights you just sign up for, and always add tag "pitch-competition". If a competition runs every year but its next cycle is
+not announced yet, submit it with null dates and say in summary when it ran last time and when applications usually open.
+Score higher for real prize money or investor judges, student or young-founder eligibility, pre-revenue OK, and deadlines
+within three months; location does not change the score.`,
   },
   {
     id: "sooz-resources",

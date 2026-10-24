@@ -2,7 +2,8 @@ import { and, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle
 import { db } from "@/db";
 import { radarItems } from "@/db/schema";
 import { statusesFor, type OpportunityStatus, type OpportunityView } from "@/lib/opportunities";
-import { FEEDS, PERSON_KINDS, type Feed } from "@/lib/radar/types";
+import { dedupeKey } from "@/lib/radar/dedupe";
+import { FEEDS, KINDS, PERSON_KINDS, isFeed, isPersonKind, type Feed } from "@/lib/radar/types";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -103,4 +104,58 @@ export async function markOpportunitiesSeen(userId: string, feed: Feed): Promise
     .update(radarItems)
     .set({ status: "seen" })
     .where(and(eq(radarItems.userId, userId), eq(radarItems.feed, feed), eq(radarItems.status, "new"), notPerson));
+}
+
+export type NewOpportunity = {
+  feed: string;
+  kind: string;
+  title: string;
+  url: string;
+  deadline?: string | null;
+  eventDate?: string | null;
+  pitchCompetition?: boolean;
+  notes?: string | null;
+};
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Something the owner found themselves (never a person). It lands in To apply, starred, tagged "added-by-me", and the
+ * weekly research uses it as a seed to look for similar competitions.
+ */
+export async function addOpportunity(userId: string, input: NewOpportunity): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const title = input.title.trim().slice(0, 160);
+  const url = input.url.trim();
+  if (!isFeed(input.feed) || !KINDS[input.feed].includes(input.kind) || isPersonKind(input.kind)) {
+    return { ok: false, error: "Choose a type (people go in the CRM)." };
+  }
+  if (!title) return { ok: false, error: "Add a name." };
+  try {
+    if (!/^https?:$/.test(new URL(url).protocol)) throw new Error("bad");
+  } catch {
+    return { ok: false, error: "Add the link (starting with https://)." };
+  }
+  const deadline = input.deadline && DAY.test(input.deadline) ? input.deadline : null;
+  const eventDate = input.eventDate && DAY.test(input.eventDate) ? input.eventDate : null;
+  const [row] = await db
+    .insert(radarItems)
+    .values({
+      userId,
+      feed: input.feed,
+      kind: input.kind,
+      title,
+      url,
+      source: "Added by you",
+      score: 80,
+      status: "saved",
+      tags: ["added-by-me", ...(input.pitchCompetition ? ["pitch-competition"] : [])],
+      deadline,
+      eventDate,
+      notes: (input.notes ?? "").trim().slice(0, 4000),
+      dedupeKey: dedupeKey({ feed: input.feed, kind: input.kind, title, url, event_date: eventDate }),
+      taskId: "owner",
+    })
+    .onConflictDoNothing()
+    .returning({ id: radarItems.id });
+  return row ? { ok: true, id: row.id } : { ok: false, error: "That's already in Opportunities." };
 }
