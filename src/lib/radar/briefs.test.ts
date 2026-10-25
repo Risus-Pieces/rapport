@@ -37,6 +37,13 @@ describe("research tasks", () => {
     expect(t.brief).toMatch(/SEEDS/);
     expect(t.brief).not.toMatch(/Houston\/Texas or virtual/);
   });
+  it("hunts retail accelerators and retailer programs, tagged and watched like competitions", () => {
+    const t = TASKS.find((x) => x.id === "sooz-resources")!;
+    expect(t.brief).toMatch(/tag "accelerator"/);
+    expect(t.brief).toMatch(/Whole Foods LEAP/);
+    expect(t.brief).toMatch(/WATCHLIST/);
+    expect(t.maxSearches).toBeGreaterThanOrEqual(20);
+  });
   it("keeps job in Career only", () => {
     expect(KINDS.personal).not.toContain("job");
     expect(KINDS.career).toContain("job");

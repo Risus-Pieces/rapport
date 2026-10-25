@@ -182,17 +182,26 @@ within three months; location does not change the score.`,
   {
     id: "sooz-resources",
     feed: SOOZ,
-    label: "Funding, programs & resources",
+    label: "Accelerators, retailer programs, funding & resources",
     kinds: ["funding", "resource"],
     upcomingOnly: false,
-    maxSearches: 10,
-    brief: `Find other things that would genuinely help a pre-seed food & beverage CPG startup:
-accelerators and incubators for food/bev/CPG (with open application windows), non-dilutive grants and
-competitions (USDA, state, SBA, corporate), corporate beverage venture and accelerator programs (e.g. the venture
-arms and emerging-brand programs of large beverage and food companies, with open application windows), co-manufacturing / co-packer directories and communities,
-retail/distribution programs for emerging brands (e.g. retailer emerging-brand programs), notable recent
-CPG funding news or investor theses worth knowing, and founder communities. Use kind "funding" for anything
-with money or an application; "resource" for everything else. Include deadlines when they exist.`,
+    maxSearches: 22,
+    brief: `Find programs and resources that would genuinely help a pre-seed, pre-launch food & beverage CPG startup,
+anywhere in the United States (or virtual):
+- Retailer and distributor emerging-brand programs and accelerators, e.g. Whole Foods LEAP, Walmart Open Call and its
+  partner accelerators, Target Accelerators, Albertsons Innovation Launchpad, Sprouts new-item / Forager, Kroger, H-E-B
+  Quest for Texas Best and other grocers' local and emerging-brand programs, UNFI and KeHE emerging-brand programs, and
+  roundup articles that list them (e.g. investor and agency blog roundups of retail accelerators).
+- Independent CPG accelerators and incubators (with open or upcoming application windows), corporate beverage and food
+  venture programs, and university or city incubators that take consumer brands.
+- Non-dilutive grants and competitions (USDA, state, SBA, corporate), co-manufacturing / co-packer directories and
+  communities, notable recent CPG funding news or investor theses worth knowing, and founder communities.
+Eligibility matters: say in summary whether a pre-revenue, pre-launch brand can apply; still include strong programs that
+need revenue or shelf-ready product, but say what they require so the owner can plan. Use the WATCHLIST and SEEDS given to
+you the same way as the pitch-competition task: check annual programs whose last window is over (submit the next cycle,
+titled with the new year, when announced; null dates and a note on the usual timing otherwise), and look for programs like
+the owner's seeds. Use kind "funding" for anything with money or an application, "resource" for everything else; add
+tag "accelerator" to accelerators and retailer / distributor emerging-brand programs. Include deadlines when they exist.`,
   },
   {
     id: "sooz-celebrities",
