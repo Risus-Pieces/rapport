@@ -47,6 +47,14 @@ describe.skipIf(!hasDevDb)("competition watchlist and owner-added opportunities 
     expect(w.due.find((d) => d.title === "Spring Pitch Prize 2026")).toMatchObject({ series: "spring pitch prize", usual_month: "March" });
   });
 
+  it("watches annual accelerators and retailer programs the same way", async () => {
+    await comp("Grocer Emerging Brand Accelerator 2026", { deadline: "2026-07-06", tags: ["accelerator"] });
+    await comp("Saved Accelerator", { status: "saved", tags: ["accelerator", "added-by-me"] });
+    const w = await watch();
+    expect(w.due.map((d) => d.title)).toEqual(expect.arrayContaining(["Grocer Emerging Brand Accelerator 2026"]));
+    expect(w.seeds.map((x) => x.title)).toEqual(["Saved Accelerator"]);
+  });
+
   it("offers the competitions the owner saved, applied to or added as seeds for finding similar ones", async () => {
     await comp("Saved Showcase", { status: "saved" });
     await comp("Applied Challenge", { status: "applied" });

@@ -141,6 +141,13 @@
       "when": 1792884910839,
       "tag": "0019_competition_watch",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792905412069,
+      "tag": "0020_accelerator_watch",
+      "breakpoints": true
     }
   ]
 }
