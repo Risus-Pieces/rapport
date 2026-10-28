@@ -94,6 +94,8 @@ export const contacts = pgTable(
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     relationship: relationshipColumn(),
     relationshipAt: timestamp("relationship_at", { withTimezone: true }),
+    // A Sooz person in General (from the research or with Sooz outreach): seen by every member of the workspace.
+    shared: boolean("shared").notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -373,5 +375,26 @@ export const outreachMessages = pgTable(
     index("outreach_messages_user_status_idx").on(t.userId, t.status),
     check("outreach_messages_kind_check", sql`${t.kind} in ('first', 'followup_1', 'followup_2', 'update', 'launch_ask', 'launch_followup')`),
     check("outreach_messages_status_check", sql`${t.status} in ('ready', 'in_gmail', 'sent', 'replied', 'skipped')`),
+  ],
+);
+
+// Who works in whose workspace. The owner's user id is the workspace; Sooz rows live under it, personal rows under each
+// user. A user with no row is their own workspace. Exactly one row has role 'owner' (the routines run as that user).
+export const members = pgTable(
+  "members",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull().default("member"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("members_role_check", sql`${t.role} in ('owner', 'member')`),
+    uniqueIndex("members_one_owner_idx").on(t.role).where(sql`${t.role} = 'owner'`),
+    index("members_workspace_idx").on(t.workspaceId),
   ],
 );

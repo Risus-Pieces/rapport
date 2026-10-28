@@ -148,6 +148,20 @@
       "when": 1792905412069,
       "tag": "0020_accelerator_watch",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793153219052,
+      "tag": "0021_members",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793153222273,
+      "tag": "0022_members_sql",
+      "breakpoints": true
     }
   ]
 }

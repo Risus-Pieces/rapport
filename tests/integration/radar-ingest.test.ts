@@ -160,7 +160,8 @@ describe.skipIf(!hasDevDb)("radar ingest SQL (runs against the Neon dev branch)"
     });
   });
 
-  it("rr_owner refuses to guess when there is not exactly one user", async () => {
-    await expect(q(`select rr_owner()`)).rejects.toThrow(/exactly one owner/);
+  it("rr_owner is the workspace owner, however many users exist", async () => {
+    const owner = (await q<{ user_id: string }>(`select user_id from members where role = 'owner'`))[0];
+    expect((await q<{ o: string }>(`select rr_owner() as o`))[0].o).toBe(owner.user_id);
   });
 });
