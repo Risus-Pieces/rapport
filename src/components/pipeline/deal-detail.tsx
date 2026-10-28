@@ -23,16 +23,16 @@ import { AdviceCallCard } from "@/components/raise/advice-call";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
 import { RelationshipControl } from "@/components/relationship-control";
 import { listOutreachFor } from "@/db/queries/radar";
-import { requireSession } from "@/lib/session";
+import { getScope } from "@/lib/scope";
 import { uuid } from "@/lib/validation/common";
 
 export async function loadDeal(section: PipelineSection, rawId: string) {
-  const session = await requireSession();
+  const userId = (await getScope()).workspaceId;
   const id = uuid.safeParse(rawId);
   if (!id.success) notFound();
-  const deal = await getDeal(session.user.id, id.data);
+  const deal = await getDeal(userId, id.data);
   if (!deal || deal.section !== section) notFound();
-  return { userId: session.user.id, deal };
+  return { userId, deal };
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {

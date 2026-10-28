@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   OPPORTUNITY_SORTS,
   listOpportunities,
-  newOpportunityCounts,
   opportunityCounts,
   opportunityKindCounts,
   type OpportunitySort,
@@ -17,7 +16,8 @@ import {
 import { recentRadarRuns } from "@/db/queries/radar";
 import { OPPORTUNITY_VIEWS, OPPORTUNITY_VIEW_LABELS, isOpportunityView, type OpportunityView } from "@/lib/opportunities";
 import { FEEDS, FEED_LABELS, KINDS, isFeed, isPersonKind, kindLabel, type Feed } from "@/lib/radar/types";
-import { requireSession } from "@/lib/session";
+import { newOpportunityCountsScoped } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 import { addOpportunityAction, seeAllOpportunitiesAction } from "./actions";
 
@@ -41,10 +41,11 @@ function pill(active: boolean) {
 }
 
 export default async function OpportunitiesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const session = await requireSession();
-  const userId = session.user.id;
+  const scope = await getScope();
   const sp = await searchParams;
   const feed: Feed = isFeed(one(sp.feed)) ? (one(sp.feed) as Feed) : "sooz";
+  // The Sooz feed is the shared workspace's; Personal and Career are mine.
+  const userId = feed === "sooz" ? scope.workspaceId : scope.userId;
   const view: OpportunityView = isOpportunityView(one(sp.view)) ? (one(sp.view) as OpportunityView) : "to_apply";
   const kindOptions = KINDS[feed].filter((k) => !isPersonKind(k));
   const kind = kindOptions.includes(one(sp.kind)) ? one(sp.kind) : undefined;
@@ -72,14 +73,14 @@ export default async function OpportunitiesPage({ searchParams }: { searchParams
     listOpportunities(userId, { feed, view, kind, q, rice, sort }),
     opportunityCounts(userId, feed),
     opportunityKindCounts(userId, feed, view),
-    newOpportunityCounts(userId),
-    recentRadarRuns(userId),
+    newOpportunityCountsScoped(scope),
+    recentRadarRuns(scope.workspaceId),
   ]);
   const lastRun = runs.find((r) => r.finishedAt && !r.error);
 
   return (
     <>
-      <PageHeader title="Opportunities" description={BLURBS[feed]} />
+      <PageHeader title="Opportunities" description={`${BLURBS[feed]}${feed === "sooz" ? " Shared with your team." : " Only you see this feed."}`} />
 
       <nav aria-label="Feeds" className="mb-4 flex flex-wrap gap-2">
         {FEEDS.map((f) => (

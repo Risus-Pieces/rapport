@@ -6,7 +6,8 @@ import { addOpportunity, markOpportunitiesSeen, setOpportunityStatus } from "@/d
 import { setRadarNotes } from "@/db/queries/radar";
 import { isOpportunityStatus } from "@/lib/opportunities";
 import { isFeed } from "@/lib/radar/types";
-import { requireSession } from "@/lib/session";
+import { itemOwner } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { uuid } from "@/lib/validation/common";
 
 function refreshAll() {
@@ -14,36 +15,39 @@ function refreshAll() {
 }
 
 export async function opportunityStatusAction(formData: FormData) {
-  const session = await requireSession();
+  const scope = await getScope();
   const id = uuid.safeParse(formData.get("id"));
   const status = String(formData.get("status") ?? "");
   if (!id.success || !isOpportunityStatus(status)) return;
-  await setOpportunityStatus(session.user.id, id.data, status);
+  const owner = await itemOwner(scope, id.data);
+  if (owner) await setOpportunityStatus(owner, id.data, status);
   refreshAll();
 }
 
 export async function opportunityNotesAction(formData: FormData) {
-  const session = await requireSession();
+  const scope = await getScope();
   const id = uuid.safeParse(formData.get("id"));
   if (!id.success) return;
-  await setRadarNotes(session.user.id, id.data, String(formData.get("notes") ?? ""));
+  const owner = await itemOwner(scope, id.data);
+  if (owner) await setRadarNotes(owner, id.data, String(formData.get("notes") ?? ""));
   refreshAll();
 }
 
 export async function seeAllOpportunitiesAction(formData: FormData) {
-  const session = await requireSession();
+  const scope = await getScope();
   const feed = String(formData.get("feed") ?? "");
   if (!isFeed(feed)) return;
-  await markOpportunitiesSeen(session.user.id, feed);
+  // The Sooz feed is the shared workspace's; Personal and Career are mine.
+  await markOpportunitiesSeen(feed === "sooz" ? scope.workspaceId : scope.userId, feed);
   refreshAll();
 }
 
 /** Something the owner found themselves: saved to To apply, and a seed for the weekly competition search. */
 export async function addOpportunityAction(formData: FormData) {
-  const session = await requireSession();
+  const scope = await getScope();
   const field = (name: string) => String(formData.get(name) ?? "");
   const feed = isFeed(field("feed")) ? field("feed") : "sooz";
-  const result = await addOpportunity(session.user.id, {
+  const result = await addOpportunity(feed === "sooz" ? scope.workspaceId : scope.userId, {
     feed,
     kind: field("kind"),
     title: field("title"),

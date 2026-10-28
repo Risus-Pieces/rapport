@@ -80,6 +80,9 @@ describe("routine prompts", () => {
     expect(p).toMatch(/nextgen[^\n]*only a business or management contact/);
     // Try again: someone who went quiet gets a short note that circles back, not a cold introduction.
     expect(p).toMatch(/retry is true[^\n]*circling-back note/);
+    // Drafts go out from the owner's Gmail: only the owner's own connections become intro requests.
+    expect(p).toMatch(/owner_is_sender/);
+    expect(p).toMatch(/ask <who> for an intro/);
   });
 
   it("gmail (daily): only creates drafts and watches; never sends; checks the account", () => {

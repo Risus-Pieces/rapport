@@ -2,6 +2,7 @@ import { and, count, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { contacts, deals, type Section } from "@/db/schema";
 import { RELATIONSHIPS, type Relationship } from "@/lib/relationships";
+import { sharedContact } from "./shared";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
@@ -50,12 +51,16 @@ export async function setDealRelationship(userId: string, dealId: string, r: Rel
 }
 
 /** How many records sit in each relationship: deals for the pipelines, contacts for General. */
-export async function relationshipCounts(userId: string, section: Section): Promise<Record<Relationship, number>> {
+export async function relationshipCounts(
+  userId: string,
+  section: Section,
+  options: { sharedOnly?: boolean } = {},
+): Promise<Record<Relationship, number>> {
   const table = section === "general" ? contacts : deals;
   const rows = await db
     .select({ r: table.relationship, n: count() })
     .from(table)
-    .where(and(eq(table.userId, userId), eq(table.section, section)))
+    .where(and(eq(table.userId, userId), eq(table.section, section), options.sharedOnly && section === "general" ? sharedContact : undefined))
     .groupBy(table.relationship);
   const counts = Object.fromEntries(RELATIONSHIPS.map((r) => [r, 0])) as Record<Relationship, number>;
   for (const row of rows) if (row.r in counts) counts[row.r as Relationship] = row.n;

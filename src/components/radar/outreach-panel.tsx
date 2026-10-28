@@ -118,8 +118,8 @@ export async function OutreachPanel({
           ) : null}
           {known.length ? (
             <>
-              <dt className="text-muted-foreground">You know</dt>
-              <dd>{known.map((w) => `${w.full_name}${w.position ? ` (${w.position})` : ""}`).join(", ")} at {known[0].company}</dd>
+              <dt className="text-muted-foreground">Team knows</dt>
+              <dd>{known.map((w) => `${w.full_name}${w.position ? ` (${w.position})` : ""} via ${w.who}`).join(", ")} at {known[0].company}</dd>
             </>
           ) : null}
         </dl>

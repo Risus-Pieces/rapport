@@ -2,6 +2,7 @@ import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { contacts, deals, tasks, type Section } from "@/db/schema";
 import type { TaskInput } from "@/lib/validation/task";
+import { sharedTask } from "./shared";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
@@ -54,7 +55,10 @@ export async function createTask(userId: string, input: TaskInput) {
 }
 
 /** Open tasks, optionally for one contact. Order is by due date, undated last. */
-export async function listOpenTasks(userId: string, options: { contactId?: string; dealId?: string } = {}): Promise<TaskRow[]> {
+export async function listOpenTasks(
+  userId: string,
+  options: { contactId?: string; dealId?: string; sharedOnly?: boolean } = {},
+): Promise<TaskRow[]> {
   return db
     .select(taskColumns)
     .from(tasks)
@@ -63,6 +67,7 @@ export async function listOpenTasks(userId: string, options: { contactId?: strin
       and(
         eq(tasks.userId, userId),
         isNull(tasks.doneAt),
+        options.sharedOnly ? sharedTask : undefined,
         options.contactId ? eq(tasks.contactId, options.contactId) : undefined,
         options.dealId ? eq(tasks.dealId, options.dealId) : undefined,
       ),
@@ -73,7 +78,7 @@ export async function listOpenTasks(userId: string, options: { contactId?: strin
 /** Most recently completed tasks first. */
 export async function listDoneTasks(
   userId: string,
-  options: { contactId?: string; dealId?: string; limit?: number } = {},
+  options: { contactId?: string; dealId?: string; limit?: number; sharedOnly?: boolean } = {},
 ): Promise<TaskRow[]> {
   return db
     .select(taskColumns)
@@ -83,6 +88,7 @@ export async function listDoneTasks(
       and(
         eq(tasks.userId, userId),
         isNotNull(tasks.doneAt),
+        options.sharedOnly ? sharedTask : undefined,
         options.contactId ? eq(tasks.contactId, options.contactId) : undefined,
         options.dealId ? eq(tasks.dealId, options.dealId) : undefined,
       ),

@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getPitch, networkSize } from "@/db/queries/radar";
 import { PITCH_FIELDS } from "@/lib/radar/drafts";
+import { addMemberAction, removeMemberAction } from "@/app/actions/members";
+import { listMembers } from "@/db/queries/members";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
+import { getScope } from "@/lib/scope";
 import { requireSession } from "@/lib/session";
 
 export const metadata = { title: "Settings" };
@@ -29,10 +33,19 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await requireSession();
   const sp = await searchParams;
-  const [pitch, net] = await Promise.all([getPitch(session.user.id), networkSize(session.user.id)]);
+  const scope = await getScope();
+  const [pitch, net, team] = await Promise.all([
+    getPitch(scope.workspaceId),
+    networkSize(scope.userId),
+    scope.isOwner ? listMembers(scope.userId) : Promise.resolve([]),
+  ]);
   const err = one(sp.err);
   const ok =
-    one(sp.saved) === "pitch"
+    one(sp.member) === "added"
+      ? "Added. They can sign in now with that email and password."
+      : one(sp.member) === "removed"
+        ? "Removed."
+        : one(sp.saved) === "pitch"
       ? "Pitch facts saved."
       : one(sp.network)
         ? `Imported ${one(sp.network)} connections.`
@@ -174,12 +187,68 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </dl>
         </Card>
 
+        {scope.isOwner ? (
+          <Card id="team" className="scroll-mt-6 gap-4 p-5">
+            <div className="space-y-1">
+              <h2 className="font-medium">Team</h2>
+              <p className="text-sm text-muted-foreground">
+                People you add share Sooz with you: Restaurants, Investors, the Sooz feed, This week and pitch facts. Their
+                General contacts and Personal and Career opportunities stay their own, and yours stay yours.
+              </p>
+            </div>
+            {team.length ? (
+              <ul className="divide-y divide-border text-sm">
+                {team.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span>
+                      <span className="font-medium">{m.name}</span>{" "}
+                      <span className="text-muted-foreground">{m.email}</span>
+                    </span>
+                    <form action={removeMemberAction}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <Button type="submit" variant="ghost" size="lg">
+                        Remove
+                      </Button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <form action={addMemberAction} className="grid gap-3 sm:grid-cols-3">
+              <label className="grid gap-1 text-sm">
+                Name
+                <Input name="name" required maxLength={100} placeholder="Mo" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                Email
+                <Input name="email" type="email" required placeholder="mo@drinksooz.com" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                Starting password
+                <Input name="password" type="password" required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" />
+              </label>
+              <div className="sm:col-span-3">
+                <Button type="submit" size="lg">
+                  Add to the team
+                </Button>
+              </div>
+            </form>
+            <p className="text-xs text-muted-foreground">
+              Removing someone deletes their login and their own contacts and opportunities. Shared Sooz work stays.
+            </p>
+          </Card>
+        ) : null}
+
         <Card className="gap-2 p-5">
           <h2 className="font-medium">Account</h2>
           <p className="text-sm text-muted-foreground">Signed in as {session.user.email}.</p>
-          <p className="text-sm text-muted-foreground">
-            To change your password, run <code>npm run reset:owner-password</code> on a computer that has the project and its <code>.env.local</code>. It signs out every session.
-          </p>
+          {scope.isOwner ? (
+            <p className="text-sm text-muted-foreground">
+              To change your password, run <code>npm run reset:owner-password</code> on a computer that has the project and its <code>.env.local</code>. It signs out every session.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">You&apos;re part of {"the owner's"} Sooz workspace. To change your password, ask the owner.</p>
+          )}
         </Card>
       </div>
     </>

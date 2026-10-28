@@ -21,6 +21,9 @@ function checkPassword(password: string) {
 
 // Sign-up is disabled for the public API, so the owner is created through Better Auth's
 // internal adapter, which writes the same rows a normal sign-up would.
+// Creates a login (the owner at setup, or a member the owner adds from Settings).
+export const createAccount = (input: OwnerInput) => createOwner(input);
+
 export async function createOwner({ email, name, password }: OwnerInput) {
   const normalizedEmail = email.trim().toLowerCase();
   if (!emailSchema.safeParse(normalizedEmail).success) throw new Error("Enter a valid email address.");

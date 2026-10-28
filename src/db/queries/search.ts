@@ -4,6 +4,7 @@ import { contacts, deals, radarItems } from "@/db/schema";
 import { INVESTOR_TYPE_LABELS, investorTypeOf, PIPELINES, type PipelineSection } from "@/lib/sections";
 import { opportunityHref } from "@/lib/opportunities";
 import { FEED_LABELS, PERSON_KINDS, kindLabel, type Feed } from "@/lib/radar/types";
+import { sharedContact, sharedDeal, sharedRadarItem } from "./shared";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -13,7 +14,8 @@ export type SearchHit = { id: string; label: string; detail: string; href: strin
 const LIMIT = 6;
 
 /** Finds deals and contacts by name, email or role. Each hit links to the page that shows it. */
-export async function searchRecords(userId: string, query: string): Promise<SearchHit[]> {
+/** sharedOnly: only what a workspace member may see (Sooz records), for searching the owner's workspace as a member. */
+export async function searchRecords(userId: string, query: string, options: { sharedOnly?: boolean } = {}): Promise<SearchHit[]> {
   const q = query.trim().slice(0, 100);
   if (q.length < 2) return [];
   const pattern = `%${escapeLike(q)}%`;
@@ -21,7 +23,7 @@ export async function searchRecords(userId: string, query: string): Promise<Sear
   const dealRows = await db
     .select({ id: deals.id, title: deals.title, section: deals.section, stage: deals.stage, details: deals.details })
     .from(deals)
-    .where(and(eq(deals.userId, userId), ilike(deals.title, pattern)))
+    .where(and(eq(deals.userId, userId), ilike(deals.title, pattern), options.sharedOnly ? sharedDeal : undefined))
     .limit(LIMIT);
 
   const contactRows = await db
@@ -31,6 +33,7 @@ export async function searchRecords(userId: string, query: string): Promise<Sear
       and(
         eq(contacts.userId, userId),
         isNull(contacts.archivedAt),
+        options.sharedOnly ? sharedContact : undefined,
         or(ilike(contacts.name, pattern), ilike(contacts.email, pattern), ilike(contacts.title, pattern)),
       ),
     )
@@ -83,7 +86,7 @@ export async function searchRecords(userId: string, query: string): Promise<Sear
   const radarRows = await db
     .select({ id: radarItems.id, title: radarItems.title, feed: radarItems.feed, kind: radarItems.kind, status: radarItems.status })
     .from(radarItems)
-    .where(and(eq(radarItems.userId, userId), ilike(radarItems.title, pattern), notInArray(radarItems.kind, [...PERSON_KINDS])))
+    .where(and(eq(radarItems.userId, userId), ilike(radarItems.title, pattern), notInArray(radarItems.kind, [...PERSON_KINDS]), options.sharedOnly ? sharedRadarItem : undefined))
     .orderBy(asc(radarItems.title))
     .limit(LIMIT);
   for (const item of radarRows) {

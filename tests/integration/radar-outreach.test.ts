@@ -106,7 +106,7 @@ describe.skipIf(!hasDevDb)("radar outreach + digest SQL (runs against the Neon d
       const t = await todo();
       expect(t.pitch).toEqual({ "pitch.company": "Sooz" });
       expect(t.prospects.map((p) => p.name)).toEqual(["Ann Top"]);
-      expect(t.prospects[0].network_matches).toEqual([{ name: "Sam Lee", via: "LinkedIn connection" }]);
+      expect(t.prospects[0].network_matches).toEqual([{ name: "Sam Lee", via: "T's LinkedIn connection", who: "T", owner_is_sender: true }]);
     });
   });
 

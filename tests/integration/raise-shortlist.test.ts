@@ -58,7 +58,7 @@ describe.skipIf(!hasDevDb)("weekly shortlist (runs against the Neon dev branch)"
     expect(c.week).toBe(await week());
     expect(c.investors.map((x) => x.name).sort()).toEqual(["Ada Angel", "Hal Hand", "Nia Heir"]);
     expect(c.buyers.map((x) => x.name)).toEqual(["Bea Buyer"]);
-    expect(c.investors.find((x) => x.name === "Hal Hand")!.warm_paths).toEqual([{ name: "Fran Friend", via: "your contact" }]);
+    expect(c.investors.find((x) => x.name === "Hal Hand")!.warm_paths).toEqual([{ name: "Fran Friend", via: "T's contact", who: "T", owner_is_sender: true }]);
   });
 
   it("keeps at most 4 investors and 2 buyers, ignores non-candidates, and opens outreach rows", async () => {

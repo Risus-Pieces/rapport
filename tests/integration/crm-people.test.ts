@@ -248,11 +248,11 @@ describe.skipIf(!hasDevDb)("people in the CRM (runs against the Neon dev branch)
       expect(await raise.refreshGhosted(owner)).toBe(0);
     });
 
-    it("a dismissed or on-hold person found again (other firm, other section) stays out of To reach out", async () => {
+    it("a dismissed or on-hold person found again (other firm, other section, a shared Sooz contact) stays out of To reach out", async () => {
       await ingest([finding("Old Gone", "angel", { details: { firm: "First Fund" } })]);
       const first = (await item("Old Gone"))!;
       await rel.setDealRelationship(owner, first.deal_id!, "dismissed");
-      const friend = (await one<{ id: string }>(`insert into contacts (user_id, section, name) values ($1, 'general', 'Held Hugh') returning id`, [owner]))!.id;
+      const friend = (await one<{ id: string }>(`insert into contacts (user_id, section, name, shared) values ($1, 'general', 'Held Hugh', true) returning id`, [owner]))!.id;
       await rel.setContactRelationship(owner, friend, "on_hold");
       await q(`insert into radar_items (user_id, feed, kind, title, url, score, status, dedupe_key) values ($1, 'sooz', 'creator', 'Never Mind', 'https://x.com/nm', 70, 'dismissed', 'creator:never-mind')`, [owner]);
       const r = await ingest([

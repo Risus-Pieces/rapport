@@ -2,12 +2,13 @@ import { BottomTabs } from "@/components/bottom-tabs";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileHeader } from "@/components/mobile-header";
 import { Sidebar } from "@/components/sidebar";
-import { newOpportunityCounts } from "@/db/queries/opportunities";
+import { newOpportunityCountsScoped } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { requireSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
-  const fresh = await newOpportunityCounts(session.user.id);
+  const fresh = await newOpportunityCountsScoped(await getScope());
   const counts = { "/opportunities": fresh.sooz + fresh.personal + fresh.career };
   return (
     <div className="min-h-dvh md:flex">

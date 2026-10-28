@@ -25,7 +25,7 @@ import { raiseProgress } from "@/db/queries/raise";
 import { refreshGhosted, relationshipCounts } from "@/db/queries/relationships";
 import { MOVES_FROM, RelationshipButton } from "@/components/relationship-control";
 import { RELATIONSHIP_LABELS, isRelationship, type Relationship } from "@/lib/relationships";
-import { requireSession } from "@/lib/session";
+import { getScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 const VIEWS = [
@@ -56,8 +56,8 @@ function pill(active: boolean) {
 }
 
 export async function SectionPage({ section, searchParams }: { section: PipelineSection; searchParams: SearchParams }) {
-  const session = await requireSession();
-  const userId = session.user.id;
+  // Restaurants and Investors are the shared Sooz workspace.
+  const userId = (await getScope()).workspaceId;
   const requestedView = one(searchParams.view);
   const view: ViewKey = VIEWS.some((v) => v.key === requestedView) ? (requestedView as ViewKey) : "pipeline";
   const q = one(searchParams.q).trim().slice(0, 100);

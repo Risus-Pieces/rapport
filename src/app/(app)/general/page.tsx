@@ -7,12 +7,12 @@ import { ReminderBadge } from "@/components/reminder-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { listContacts } from "@/db/queries/contacts";
-import { refreshGhosted, relationshipCounts } from "@/db/queries/relationships";
+import { refreshGhosted } from "@/db/queries/relationships";
 import { MOVES_FROM, RelationshipButton } from "@/components/relationship-control";
 import { RELATIONSHIP_LABELS, isRelationship, type Relationship } from "@/lib/relationships";
 import { describeLastTouch } from "@/lib/reminders";
-import { requireSession } from "@/lib/session";
+import { generalCounts, listGeneral } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "General" };
@@ -41,7 +41,7 @@ function hrefFor(params: { filter?: FilterKey; q?: string; rel?: Relationship })
 }
 
 export default async function GeneralPage({ searchParams }: { searchParams: SearchParams }) {
-  const session = await requireSession();
+  const scope = await getScope();
   const sp = await searchParams;
   const q = one(sp.q).trim().slice(0, 100);
   // ?archived=1 is the old link for what is now On hold.
@@ -50,11 +50,8 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
   const requested = one(sp.filter);
   const filter: FilterKey = rel === "known" && FILTERS.some((f) => f.key === requested) ? (requested as FilterKey) : "all";
 
-  await refreshGhosted(session.user.id);
-  const [all, relCounts] = await Promise.all([
-    listContacts(session.user.id, "general", { q, relationship: rel }),
-    relationshipCounts(session.user.id, "general"),
-  ]);
+  await refreshGhosted(scope.workspaceId);
+  const [all, relCounts] = await Promise.all([listGeneral(scope, { q, relationship: rel }), generalCounts(scope)]);
   const back = hrefFor({ filter, q, rel });
   const counts = {
     all: all.length,
@@ -145,38 +142,52 @@ export default async function GeneralPage({ searchParams }: { searchParams: Sear
           </EmptyState>
         )
       ) : (
-        <Card className="p-2">
-          <ul>
-            {shown.map((contact) => (
-              <li key={contact.id} className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/general/${contact.id}`}
-                  className="flex min-h-16 min-w-0 flex-1 basis-80 flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-3 py-3 transition-colors hover:bg-accent"
-                >
-                  <span className="min-w-0 flex-1 basis-48">
-                    <span className="block truncate font-medium">{contact.name}</span>
-                    <span className="block truncate text-sm text-muted-foreground">
-                      {[contact.title, describeLastTouch(contact.reminder.daysSince, contact.lastTouchAt !== null)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <PriorityMeter priority={contact.priority} className="w-36 shrink-0 text-muted-foreground" />
-                  <span className="flex min-w-28 justify-end">
-                    <ReminderBadge reminder={contact.reminder} />
-                  </span>
-                </Link>
-                {rel !== "known" ? (
-                  <span className="flex flex-wrap gap-1 px-2 pb-2 sm:pb-0">
-                    {MOVES_FROM[rel].map((move) => (
-                      <RelationshipButton key={move} kind="contact" id={contact.id} move={move} back={back} variant="ghost" />
-                    ))}
-                  </span>
-                ) : null}
-              </li>
+        <div className="space-y-6">
+          {[
+            { key: "sooz", label: "Sooz people", hint: "Shared with your team", items: shown.filter((c) => c.shared) },
+            { key: "mine", label: "Yours", hint: "Only you see these", items: shown.filter((c) => !c.shared) },
+          ]
+            .filter((group) => group.items.length > 0)
+            .map((group) => (
+              <section key={group.key} aria-label={group.label} className="space-y-2">
+                <h2 className="flex items-baseline gap-2 px-1 text-sm font-medium">
+                  {group.label} <span className="font-normal text-muted-foreground">{group.hint}</span>
+                </h2>
+                  <Card className="p-2">
+                    <ul>
+                      {group.items.map((contact) => (
+                        <li key={contact.id} className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/general/${contact.id}`}
+                            className="flex min-h-16 min-w-0 flex-1 basis-80 flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-3 py-3 transition-colors hover:bg-accent"
+                          >
+                            <span className="min-w-0 flex-1 basis-48">
+                              <span className="block truncate font-medium">{contact.name}</span>
+                              <span className="block truncate text-sm text-muted-foreground">
+                                {[contact.title, describeLastTouch(contact.reminder.daysSince, contact.lastTouchAt !== null)]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </span>
+                            <PriorityMeter priority={contact.priority} className="w-36 shrink-0 text-muted-foreground" />
+                            <span className="flex min-w-28 justify-end">
+                              <ReminderBadge reminder={contact.reminder} />
+                            </span>
+                          </Link>
+                          {rel !== "known" ? (
+                            <span className="flex flex-wrap gap-1 px-2 pb-2 sm:pb-0">
+                              {MOVES_FROM[rel].map((move) => (
+                                <RelationshipButton key={move} kind="contact" id={contact.id} move={move} back={back} variant="ghost" />
+                              ))}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+              </section>
             ))}
-          </ul>
-        </Card>
+        </div>
       )}
     </>
   );

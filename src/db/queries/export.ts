@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, companies, contacts, deals, radarItems, tasks } from "@/db/schema";
+import { sharedActivity, sharedCompany, sharedContact, sharedDeal, sharedRadarItem, sharedTask } from "./shared";
 
 // Every export is scoped to one owner. Column names for contacts match the importer.
 
@@ -13,14 +14,16 @@ export function isExportKind(value: string): value is ExportKind {
 
 type Rows = Record<string, unknown>[];
 
-export async function exportRows(userId: string, kind: ExportKind): Promise<{ columns: string[]; rows: Rows }> {
+/** sharedOnly: only the Sooz records a workspace member may see. */
+export async function exportRows(userId: string, kind: ExportKind, options: { sharedOnly?: boolean } = {}): Promise<{ columns: string[]; rows: Rows }> {
+  const only = (cond: ReturnType<typeof and>) => (options.sharedOnly ? cond : undefined);
   switch (kind) {
     case "contacts": {
       const data = await db
         .select({ c: contacts, companyName: companies.name })
         .from(contacts)
         .leftJoin(companies, eq(companies.id, contacts.companyId))
-        .where(eq(contacts.userId, userId))
+        .where(and(eq(contacts.userId, userId), only(sharedContact)))
         .orderBy(contacts.section, contacts.name);
       return {
         columns: ["id", "section", "name", "title", "email", "phone", "linkedin_url", "company", "priority", "tags", "notes", "archived_at", "created_at"],
@@ -32,7 +35,7 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
       };
     }
     case "companies": {
-      const data = await db.select().from(companies).where(eq(companies.userId, userId)).orderBy(companies.section, companies.name);
+      const data = await db.select().from(companies).where(and(eq(companies.userId, userId), only(sharedCompany))).orderBy(companies.section, companies.name);
       return {
         columns: ["id", "section", "name", "website", "city", "details", "tags", "notes", "archived_at", "created_at"],
         rows: data.map((c) => ({
@@ -47,7 +50,7 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
         .from(deals)
         .leftJoin(companies, eq(companies.id, deals.companyId))
         .leftJoin(contacts, eq(contacts.id, deals.contactId))
-        .where(eq(deals.userId, userId))
+        .where(and(eq(deals.userId, userId), only(sharedDeal)))
         .orderBy(deals.section, deals.stage, deals.sortKey);
       return {
         columns: ["id", "section", "title", "stage", "status", "amount_usd", "next_step", "next_step_date", "closed_at", "company", "contact", "details", "created_at"],
@@ -66,7 +69,7 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
         .leftJoin(contacts, eq(contacts.id, activities.contactId))
         .leftJoin(companies, eq(companies.id, activities.companyId))
         .leftJoin(deals, eq(deals.id, activities.dealId))
-        .where(eq(activities.userId, userId))
+        .where(and(eq(activities.userId, userId), only(sharedActivity)))
         .orderBy(activities.occurredAt);
       return {
         columns: ["id", "type", "occurred_at", "summary", "body", "contact", "company", "deal"],
@@ -82,7 +85,7 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
         .from(tasks)
         .leftJoin(contacts, eq(contacts.id, tasks.contactId))
         .leftJoin(deals, eq(deals.id, tasks.dealId))
-        .where(eq(tasks.userId, userId))
+        .where(and(eq(tasks.userId, userId), only(sharedTask)))
         .orderBy(tasks.dueDate);
       return {
         columns: ["id", "title", "due_date", "done_at", "contact", "deal", "created_at"],
@@ -92,7 +95,7 @@ export async function exportRows(userId: string, kind: ExportKind): Promise<{ co
       };
     }
     case "radar": {
-      const data = await db.select().from(radarItems).where(eq(radarItems.userId, userId)).orderBy(radarItems.feed, radarItems.firstSeen);
+      const data = await db.select().from(radarItems).where(and(eq(radarItems.userId, userId), only(sharedRadarItem))).orderBy(radarItems.feed, radarItems.firstSeen);
       return {
         columns: ["id", "feed", "kind", "title", "url", "status", "score", "summary", "why_relevant", "tags", "details", "event_date", "deadline", "location", "notes", "first_seen"],
         rows: data.map((r) => ({

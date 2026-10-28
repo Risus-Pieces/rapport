@@ -3,20 +3,19 @@ import { CalendarCheck } from "lucide-react";
 import { ReminderBadge } from "@/components/reminder-badge";
 import { TaskList } from "@/components/tasks/task-list";
 import { PipelineSnapshot } from "@/components/pipeline-snapshot";
-import { pipelineSnapshot, recentActivities } from "@/db/queries/dashboard";
-import { newOpportunityCounts } from "@/db/queries/opportunities";
+import { pipelineSnapshot } from "@/db/queries/dashboard";
 import { outreachDraftCounts } from "@/db/queries/radar";
 import { relationshipCounts } from "@/db/queries/relationships";
 import { formatDay } from "@/lib/dates";
 import { listFollowUps } from "@/db/queries/contacts";
-import { listOpenTasks } from "@/db/queries/tasks";
 import { todayString } from "@/lib/dates";
 import { groupOpenTasks } from "@/lib/tasks";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { firstName } from "@/lib/greeting";
 import { PRIMARY_NAV, SECTION_STYLES, type SectionAccent } from "@/lib/nav";
-import { requireSession } from "@/lib/session";
+import { generalCounts, newOpportunityCountsScoped, openTasks as scopedOpenTasks, recentActivitiesScoped } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Home" };
@@ -31,18 +30,18 @@ const SECTION_BLURBS: Record<SectionAccent, string> = {
 const SECTION_TILES = PRIMARY_NAV.flatMap((item) => (item.accent ? [{ ...item, accent: item.accent }] : []));
 
 export default async function HomePage() {
-  const session = await requireSession();
+  const scope = await getScope();
   const today = todayString();
   const [openTasks, followUps, restaurants, investors, recent, fresh, investorRels, generalRels, drafts] = await Promise.all([
-    listOpenTasks(session.user.id),
-    listFollowUps(session.user.id),
-    pipelineSnapshot(session.user.id, "restaurants"),
-    pipelineSnapshot(session.user.id, "investors"),
-    recentActivities(session.user.id),
-    newOpportunityCounts(session.user.id),
-    relationshipCounts(session.user.id, "investors"),
-    relationshipCounts(session.user.id, "general"),
-    outreachDraftCounts(session.user.id),
+    scopedOpenTasks(scope),
+    listFollowUps(scope.userId),
+    pipelineSnapshot(scope.workspaceId, "restaurants"),
+    pipelineSnapshot(scope.workspaceId, "investors"),
+    recentActivitiesScoped(scope),
+    newOpportunityCountsScoped(scope),
+    relationshipCounts(scope.workspaceId, "investors"),
+    generalCounts(scope),
+    outreachDraftCounts(scope.workspaceId),
   ]);
   const radarLinks = [
     { label: "investors to reach out", n: investorRels.to_reach_out, href: "/investors?rel=to_reach_out" },
@@ -62,7 +61,7 @@ export default async function HomePage() {
       : `${total} ${total === 1 ? "thing needs" : "things need"} you today.`;
   return (
     <>
-      <PageHeader title={`Welcome back, ${firstName(session.user.name)}`} description={summary} />
+      <PageHeader title={`Welcome back, ${firstName(scope.name)}`} description={summary} />
       <div className="space-y-6">
         <Card className="gap-4 p-5">
           <h2 className="text-base font-medium">Today</h2>

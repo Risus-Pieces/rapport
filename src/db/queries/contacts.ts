@@ -4,6 +4,7 @@ import { activities, companies, contacts, deals, tasks, type ActivityType, type 
 import { getReminder, TOUCH_TYPES, compareReminders } from "@/lib/reminders";
 import type { Relationship } from "@/lib/relationships";
 import type { ContactInput } from "@/lib/validation/contact";
+import { sharedContact } from "./shared";
 import { escapeLike } from "./util";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
@@ -26,7 +27,7 @@ export type ContactListItem = ReturnType<typeof withReminder<ContactRow>>;
 export async function listContacts(
   userId: string,
   section: Section | null,
-  options: { archived?: boolean; q?: string; now?: Date; relationship?: Relationship } = {},
+  options: { archived?: boolean; q?: string; now?: Date; relationship?: Relationship; sharedOnly?: boolean } = {},
 ): Promise<ContactListItem[]> {
   const q = options.q?.trim();
   const rows = await db
@@ -45,6 +46,7 @@ export async function listContacts(
       and(
         eq(contacts.userId, userId),
         section ? eq(contacts.section, section) : undefined,
+        options.sharedOnly ? sharedContact : undefined,
         // A relationship decides archiving by itself (On hold and Dismissed are the archived ones).
         options.relationship
           ? eq(contacts.relationship, options.relationship)
@@ -200,11 +202,11 @@ export async function listFollowUps(userId: string, now = new Date()) {
 }
 
 /** Dedupe keys (section plus email, or name when there is no email) of every contact the owner has. */
-export async function listContactKeys(userId: string): Promise<Set<string>> {
+export async function listContactKeys(userId: string, options: { sharedOnly?: boolean } = {}): Promise<Set<string>> {
   const rows = await db
     .select({ section: contacts.section, name: contacts.name, email: contacts.email })
     .from(contacts)
-    .where(eq(contacts.userId, userId));
+    .where(and(eq(contacts.userId, userId), options.sharedOnly ? sharedContact : undefined));
   return new Set(rows.map((r) => `${r.section}|${(r.email?.trim() || r.name.trim()).toLowerCase()}`));
 }
 
