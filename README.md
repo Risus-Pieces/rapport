@@ -24,6 +24,16 @@ Weekly research routines (this used to be a separate app, Query, and then the Ra
 - **Settings** holds your pitch facts (the only facts drafts use), LinkedIn connections (warm paths), a people CSV
   import (people go straight into the CRM), and a research CSV export.
 
+### Team (a login for Mo)
+
+The owner adds teammates in **Settings → Team** (name, email and a starting password the owner types; public sign-up
+stays off). Everyone on the team shares Sooz: Restaurants, Investors, the Sooz feed in Opportunities, This week,
+outreach and pitch facts, plus the **Sooz people** group in General (creators, celebrities and press the research
+found). Each person's own General contacts, tasks that aren't about a Sooz record, and Personal and Career
+opportunities stay private to them. Warm-path hints say whose connection it is ("Mo knows…"); drafts still go out from
+the owner's Gmail, so only the owner's connections become intro requests. Routines run as the owner
+(`rr_owner()` reads the `members` table).
+
 ### Raise mode (This week)
 
 The **This week** page runs the $75k pre-seed raise like a small sales team, about 30 minutes a week:
