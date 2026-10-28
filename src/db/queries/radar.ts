@@ -132,17 +132,20 @@ export type WarmMatch = {
   position: string | null;
   linkedin_url: string | null;
   kind: "same_person" | "same_company";
+  /** Whose connection it is (first name): the owner's or a team member's. */
+  who: string;
 };
 
-/** Who the owner already knows: the person themself (1st-degree) or someone at one of their firms. */
+/** Who the team already knows (anyone's LinkedIn connections): the person themself or someone at one of their firms. */
 export async function warmMatches(userId: string, itemIds: string[]): Promise<Map<string, WarmMatch[]>> {
   const map = new Map<string, WarmMatch[]>();
   if (!itemIds.length) return map;
   const { rows } = await db.$client.query<WarmMatch>(
     `select i.id as item_id, n.full_name, n.company, n.position, n.linkedin_url,
-            case when lower(n.full_name) = lower(i.title) then 'same_person' else 'same_company' end as kind
+            case when lower(n.full_name) = lower(i.title) then 'same_person' else 'same_company' end as kind, t.who
        from radar_items i
-       join network n on n.user_id = i.user_id
+       join rr_team(i.user_id) t on true
+       join network n on n.user_id = t.user_id
                      and (lower(n.full_name) = lower(i.title) or n.company_key = any (rr_firm_keys(i.details->>'firm')))
       where i.user_id = $1 and i.id = any($2::uuid[])
       order by kind desc, n.full_name
