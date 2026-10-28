@@ -30,7 +30,7 @@ describe.skipIf(!hasDevDb)("members and the shared workspace (runs against the N
   });
   afterAll(async () => {
     if (db && s && users.length) await db.delete(s.user).where(inArray(s.user.id, users));
-    await q(`delete from "user" where email like 'mo-%@example.test'`);
+    await q(`delete from "user" where email like 'added-member-%@example.test'`);
   });
 
   it("the routines' owner is the workspace owner, even with more than one user", async () => {
@@ -51,14 +51,14 @@ describe.skipIf(!hasDevDb)("members and the shared workspace (runs against the N
   });
 
   it("only the owner adds a member; the new login lands in the owner's workspace", async () => {
-    const email = `mo-${randomUUID()}@example.test`;
+    const email = `added-member-${randomUUID()}@example.test`;
     const added = await m.addMember(owner, { name: "Mo", email, password: `pw-${randomUUID()}` });
     expect(added).toMatchObject({ ok: true });
     const id = (added as { id: string }).id;
     users.push(id);
     expect(await m.workspaceFor(id)).toBe(owner);
     expect((await m.listMembers(owner)).map((x) => x.email)).toEqual([email]);
-    expect(await m.addMember(id, { name: "X", email: `mo-${randomUUID()}@example.test`, password: `pw-${randomUUID()}` }))
+    expect(await m.addMember(id, { name: "X", email: `added-member-${randomUUID()}@example.test`, password: `pw-${randomUUID()}` }))
       .toMatchObject({ ok: false });
     expect(await m.addMember(owner, { name: "Mo again", email, password: `pw-${randomUUID()}` })).toMatchObject({ ok: false });
   });
