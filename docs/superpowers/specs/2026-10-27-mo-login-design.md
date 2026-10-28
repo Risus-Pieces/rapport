@@ -34,9 +34,10 @@ whoever is logged in. Log in as Mo → Mo's personal stuff; log in as Risus → 
 - **Tasks page and Home** show both: shared tasks (on deals and Sooz records) plus my personal tasks. A new task on a
   deal or Sooz contact is shared; anything else is personal. General follow-up reminders are personal.
 - **Search and export** cover the shared workspace plus my own personal records, never the other person's.
-- **Adding Mo:** a command Risus runs himself, like the existing owner setup (`npm run add-member`): it asks for Mo's
-  email, name and password and creates his account as a member of Risus's workspace. Nobody else (including me) types
-  a password. Public sign-up stays off.
+- **Adding Mo:** a "Team" card in Settings that only the owner sees (my call, replacing a command-line script, which
+  would need the production database password on the owner's machine): Risus types Mo's name, email and a starting
+  password, and the account is created as a member of Risus's workspace. Nobody else (including me) types a password.
+  Public sign-up stays off. The card lists members and can remove one (their personal data goes with them).
 - **Routines** keep running as the owner: `rr_owner()` returns the workspace owner from `members` instead of "the only
   user" (which would break the moment Mo exists). Sooz research, outreach, Gmail drafts and the digest are unchanged;
   Personal/Career research keeps filling Risus's feeds and the digest still goes only to Risus.
