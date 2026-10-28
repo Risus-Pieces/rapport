@@ -1,9 +1,9 @@
 "use server";
 
-import { searchRecords, type SearchHit } from "@/db/queries/search";
-import { requireSession } from "@/lib/session";
+import type { SearchHit } from "@/db/queries/search";
+import { searchScoped } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 
 export async function searchAction(query: string): Promise<SearchHit[]> {
-  const session = await requireSession();
-  return searchRecords(session.user.id, String(query ?? ""));
+  return searchScoped(await getScope(), String(query ?? ""));
 }

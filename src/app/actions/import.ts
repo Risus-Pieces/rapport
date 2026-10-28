@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { importContacts, listContactKeys } from "@/db/queries/contacts";
 import { MAX_IMPORT_BYTES, planContactImport } from "@/lib/contact-import";
 import { CsvError, parseCsvTable } from "@/lib/csv";
-import { requireSession } from "@/lib/session";
+import { getScope } from "@/lib/scope";
 
 export type ImportState = {
   message: string | null;
@@ -18,7 +18,7 @@ const fail = (message: string, ran: number): ImportState => ({ message, created:
 
 // Valid rows are imported and bad rows are reported by line; duplicates are skipped.
 export async function importContactsAction(prev: ImportState, formData: FormData): Promise<ImportState> {
-  const session = await requireSession();
+  const scope = await getScope();
   const ran = prev.ran + 1;
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return fail("Choose a CSV file.", ran);
@@ -27,14 +27,19 @@ export async function importContactsAction(prev: ImportState, formData: FormData
   try {
     const table = parseCsvTable(await file.text());
     if (!table.headers.includes("name")) return fail('The file needs a "name" column.', ran);
-    plan = planContactImport(table.rows, await listContactKeys(session.user.id));
+    // General rows are personal; Restaurants and Investors rows go to the shared workspace.
+    const keys = await listContactKeys(scope.userId);
+    if (scope.workspaceId !== scope.userId) for (const k of await listContactKeys(scope.workspaceId)) keys.add(k);
+    plan = planContactImport(table.rows, keys);
   } catch (error) {
     if (error instanceof CsvError) return fail(error.message, ran);
     throw error;
   }
   let created = 0;
   try {
-    created = await importContacts(session.user.id, plan.toCreate);
+    const personal = plan.toCreate.filter((c) => c.section === "general");
+    const shared = plan.toCreate.filter((c) => c.section !== "general");
+    created = (personal.length ? await importContacts(scope.userId, personal) : 0) + (shared.length ? await importContacts(scope.workspaceId, shared) : 0);
   } catch (error) {
     console.error("importContactsAction failed:", error instanceof Error ? error.message : error);
     return fail("Could not save the contacts. Nothing was imported. Try again.", ran);

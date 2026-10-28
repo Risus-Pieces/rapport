@@ -196,7 +196,8 @@ export type WeekSummary = {
   nudges: { tractionStale: boolean; monthFactsStale: boolean };
 };
 
-export async function weekSummary(userId: string, now: Date = new Date()): Promise<WeekSummary> {
+/** soozOnly: deadlines from the Sooz feed only (what a workspace member sees; Personal/Career are the owner's). */
+export async function weekSummary(userId: string, now: Date = new Date(), options: { soozOnly?: boolean } = {}): Promise<WeekSummary> {
   const week = await currentWeek();
   const [list, gmail, watch, due, apps, replies, traction, update] = await Promise.all([
     listShortlist(userId, week),
@@ -219,9 +220,9 @@ export async function weekSummary(userId: string, now: Date = new Date()): Promi
     db.$client.query<{ id: string; title: string; deadline: string; url: string | null; feed: string; kind: string }>(
       `select id, title, deadline::text as deadline, url, feed, kind from radar_items
         where user_id = $1 and deadline between current_date and current_date + 30
-          and status in ('new', 'seen', 'saved') and not rr_is_person(kind)
+          and status in ('new', 'seen', 'saved') and not rr_is_person(kind) and (not $2 or feed = 'sooz')
         order by deadline, score desc`,
-      [userId],
+      [userId, Boolean(options.soozOnly)],
     ),
     db.$client.query<{ name: string; summary: string; at: Date; contact_id: string | null; deal_id: string | null; section: string | null }>(
       `select c.name, a.summary, a.occurred_at as at, a.contact_id, a.deal_id, c.section::text as section

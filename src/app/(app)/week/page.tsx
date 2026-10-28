@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getMonthFacts, getRaise, raiseProgress, weekSummary } from "@/db/queries/raise";
 import { formatDay } from "@/lib/dates";
 import { kindLabel } from "@/lib/radar/types";
-import { requireSession } from "@/lib/session";
+import { getScope } from "@/lib/scope";
 import { approveShortlistAction, saveMonthFactsAction, saveRaiseAction, setPhaseAction } from "./actions";
 
 export const metadata = { title: "This week" };
@@ -40,10 +40,10 @@ function Section({ title, count, children, id }: { title: string; count?: number
 }
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const session = await requireSession();
-  const userId = session.user.id;
+  const scope = await getScope();
+  const userId = scope.workspaceId;
   const sp = await searchParams;
-  const [raise, progress, week, month] = await Promise.all([getRaise(userId), raiseProgress(userId), weekSummary(userId), getMonthFacts(userId)]);
+  const [raise, progress, week, month] = await Promise.all([getRaise(userId), raiseProgress(userId), weekSummary(userId, new Date(), { soozOnly: scope.userId !== scope.workspaceId }), getMonthFacts(userId)]);
   const proposed = week.shortlist.filter((r) => r.status === "proposed");
   const banner =
     one(sp.approved) !== undefined

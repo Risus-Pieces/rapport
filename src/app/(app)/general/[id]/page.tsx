@@ -18,15 +18,17 @@ import { formatDay, todayString } from "@/lib/dates";
 import { describeLastTouch } from "@/lib/reminders";
 import { OutreachPanel } from "@/components/radar/outreach-panel";
 import { listOutreachFor } from "@/db/queries/radar";
-import { requireSession } from "@/lib/session";
+import { contactOwner } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { uuid } from "@/lib/validation/common";
 import { RelationshipControl } from "@/components/relationship-control";
 import { DeleteContactDialog } from "../_components/delete-contact-dialog";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const scope = await getScope();
   const id = uuid.safeParse((await params).id);
-  const contact = id.success ? await getContact(session.user.id, id.data) : null;
+  const owner = id.success ? await contactOwner(scope, id.data) : null;
+  const contact = id.success && owner ? await getContact(owner, id.data) : null;
   return { title: contact?.name ?? "Contact" };
 }
 
@@ -47,17 +49,20 @@ export default async function ContactPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const outreachError = (await searchParams).outreachError;
-  const session = await requireSession();
+  const scope = await getScope();
   const id = uuid.safeParse((await params).id);
   if (!id.success) notFound();
-  const contact = await getContact(session.user.id, id.data);
+  // Mine, or a shared Sooz person in my workspace; anyone else's personal contact is not found.
+  const owner = await contactOwner(scope, id.data);
+  if (!owner) notFound();
+  const contact = await getContact(owner, id.data);
   if (!contact || contact.section !== "general") notFound();
   const [impact, activities, openTasks, doneTasks, outreach] = await Promise.all([
-    getContactDeleteImpact(session.user.id, contact.id),
-    listContactActivities(session.user.id, contact.id),
-    listOpenTasks(session.user.id, { contactId: contact.id }),
-    listDoneTasks(session.user.id, { contactId: contact.id, limit: 5 }),
-    listOutreachFor(session.user.id, { contactId: contact.id }),
+    getContactDeleteImpact(owner, contact.id),
+    listContactActivities(owner, contact.id),
+    listOpenTasks(owner, { contactId: contact.id }),
+    listDoneTasks(owner, { contactId: contact.id, limit: 5 }),
+    listOutreachFor(owner, { contactId: contact.id }),
   ]);
   const today = todayString();
   const archived = contact.archivedAt !== null;
@@ -94,7 +99,7 @@ export default async function ContactPage({
               {outreach.map((o, i) => (
                 <OutreachPanel
                   key={o.id}
-                  userId={session.user.id}
+                  userId={scope.workspaceId}
                   outreach={o}
                   back={`/general/${contact.id}`}
                   error={i === 0 && typeof outreachError === "string" ? outreachError : undefined}

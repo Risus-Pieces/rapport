@@ -8,7 +8,8 @@ import {
   InvalidCompanyError,
   updateContact,
 } from "@/db/queries/contacts";
-import { requireSession } from "@/lib/session";
+import { contactOwner } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { fieldErrors, formToObject, uuid, type FieldErrors } from "@/lib/validation/common";
 import { contactSchema } from "@/lib/validation/contact";
 
@@ -26,7 +27,7 @@ function refresh(id?: string) {
 }
 
 export async function saveContactAction(_prev: ContactFormState, formData: FormData): Promise<ContactFormState> {
-  const session = await requireSession();
+  const scope = await getScope();
   const values = formToObject(formData);
   const parsed = contactSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), message: null, values };
@@ -37,11 +38,13 @@ export async function saveContactAction(_prev: ContactFormState, formData: FormD
   let savedId: string;
   try {
     if (id) {
-      const updated = await updateContact(session.user.id, SECTION, id.data, parsed.data);
+      const owner = await contactOwner(scope, id.data);
+      const updated = owner ? await updateContact(owner, SECTION, id.data, parsed.data) : null;
       if (!updated) return { errors: {}, message: "That contact no longer exists.", values };
       savedId = updated.id;
     } else {
-      savedId = (await createContact(session.user.id, SECTION, parsed.data)).id;
+      // A new General contact is personal (only shared Sooz people are seen by the team).
+      savedId = (await createContact(scope.userId, SECTION, parsed.data)).id;
     }
   } catch (error) {
     if (error instanceof InvalidCompanyError) return { errors: { companyId: error.message }, message: null, values };
@@ -53,10 +56,11 @@ export async function saveContactAction(_prev: ContactFormState, formData: FormD
 }
 
 export async function deleteContactAction(formData: FormData) {
-  const session = await requireSession();
+  const scope = await getScope();
   const id = uuid.safeParse(formData.get("id"));
   if (!id.success) return;
-  await deleteContact(session.user.id, SECTION, id.data);
+  const owner = await contactOwner(scope, id.data);
+  if (owner) await deleteContact(owner, SECTION, id.data);
   refresh();
   redirect("/general");
 }

@@ -4,16 +4,16 @@ import { PageHeader } from "@/components/page-header";
 import { TaskForm } from "@/components/tasks/task-form";
 import { TaskList } from "@/components/tasks/task-list";
 import { Card } from "@/components/ui/card";
-import { listDoneTasks, listOpenTasks } from "@/db/queries/tasks";
 import { todayString } from "@/lib/dates";
-import { requireSession } from "@/lib/session";
+import { doneTasks, openTasks } from "@/db/queries/access";
+import { getScope } from "@/lib/scope";
 import { groupOpenTasks } from "@/lib/tasks";
 
 export const metadata = { title: "Tasks" };
 
 export default async function TasksPage() {
-  const session = await requireSession();
-  const [open, done] = await Promise.all([listOpenTasks(session.user.id), listDoneTasks(session.user.id)]);
+  const scope = await getScope();
+  const [open, done] = await Promise.all([openTasks(scope), doneTasks(scope)]);
   const today = todayString();
   const groups = groupOpenTasks(open, today);
   const sections = [

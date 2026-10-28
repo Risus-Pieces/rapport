@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { contacts, deals, radarItems, tasks } from "@/db/schema";
+import { activities, contacts, deals, radarItems, tasks } from "@/db/schema";
 import { compareReminders } from "@/lib/reminders";
+import { recentActivities } from "./dashboard";
 import type { Relationship } from "@/lib/relationships";
 import type { Scope } from "@/lib/scope";
 import { listContacts } from "./contacts";
@@ -9,7 +10,7 @@ import { exportRows, type ExportKind } from "./export";
 import { newOpportunityCounts } from "./opportunities";
 import { relationshipCounts } from "./relationships";
 import { searchRecords } from "./search";
-import { sharedContact, sharedDeal, sharedRadarItem, sharedTask } from "./shared";
+import { sharedActivity, sharedContact, sharedDeal, sharedRadarItem, sharedTask } from "./shared";
 import { listDoneTasks, listOpenTasks } from "./tasks";
 
 // What a logged-in person may reach: their own rows, plus the shared (Sooz) rows of their workspace.
@@ -98,4 +99,28 @@ export async function newOpportunityCountsScoped(scope: Scope) {
     member(scope) ? newOpportunityCounts(scope.workspaceId) : Promise.resolve(null),
   ]);
   return { sooz: (workspace ?? mine).sooz, personal: mine.personal, career: mine.career };
+}
+
+export async function activityOwner(scope: Scope, activityId: string): Promise<string | null> {
+  const [row] = await db.select({ userId: activities.userId }).from(activities).where(eq(activities.id, activityId));
+  return ownerOf(scope, row?.userId, async () =>
+    Boolean((await db.select({ id: activities.id }).from(activities).where(and(eq(activities.id, activityId), sharedActivity)))[0]));
+}
+
+/**
+ * The id that should own something attached to a record (an activity, a task): the record's owner when the person may
+ * reach it, else the person themself (so the existing queries refuse an unreachable record as "not found").
+ */
+export async function targetOwner(scope: Scope, target: { contactId?: string | null; dealId?: string | null }): Promise<string> {
+  if (target.dealId) return (await dealOwner(scope, target.dealId)) ?? scope.userId;
+  if (target.contactId) return (await contactOwner(scope, target.contactId)) ?? scope.userId;
+  return scope.userId;
+}
+
+/** Recent activity: mine plus what happened on shared Sooz records, newest first. */
+export async function recentActivitiesScoped(scope: Scope, limit = 8) {
+  const own = await recentActivities(scope.userId, limit);
+  if (!member(scope)) return own;
+  const shared = await recentActivities(scope.workspaceId, limit, { sharedOnly: true });
+  return [...own, ...shared].sort((x, y) => y.occurredAt.getTime() - x.occurredAt.getTime()).slice(0, limit);
 }

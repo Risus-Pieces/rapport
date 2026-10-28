@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { activities, companies, contacts, deals } from "@/db/schema";
 import type { PipelineSection } from "@/lib/sections";
 import { buildSnapshot } from "@/lib/snapshot";
+import { sharedActivity } from "./shared";
 
 // Every function takes the owner's userId and adds it to every query: there is no database RLS.
 
@@ -19,7 +20,8 @@ export async function pipelineSnapshot(userId: string, section: PipelineSection)
   );
 }
 
-export async function recentActivities(userId: string, limit = 8) {
+/** sharedOnly: only activity on Sooz records (a workspace member's view of the owner's workspace). */
+export async function recentActivities(userId: string, limit = 8, options: { sharedOnly?: boolean } = {}) {
   return db
     .select({
       id: activities.id,
@@ -37,7 +39,7 @@ export async function recentActivities(userId: string, limit = 8) {
     .leftJoin(contacts, eq(contacts.id, activities.contactId))
     .leftJoin(companies, eq(companies.id, activities.companyId))
     .leftJoin(deals, eq(deals.id, activities.dealId))
-    .where(eq(activities.userId, userId))
+    .where(and(eq(activities.userId, userId), options.sharedOnly ? sharedActivity : undefined))
     .orderBy(desc(activities.occurredAt), desc(activities.createdAt))
     .limit(limit);
 }
