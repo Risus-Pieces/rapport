@@ -5,7 +5,7 @@ import { compareReminders } from "@/lib/reminders";
 import { recentActivities } from "./dashboard";
 import type { Relationship } from "@/lib/relationships";
 import type { Scope } from "@/lib/scope";
-import { listContacts } from "./contacts";
+import { listContactKeys, listContacts } from "./contacts";
 import { exportRows, type ExportKind } from "./export";
 import { newOpportunityCounts } from "./opportunities";
 import { relationshipCounts } from "./relationships";
@@ -112,9 +112,21 @@ export async function activityOwner(scope: Scope, activityId: string): Promise<s
  * reach it, else the person themself (so the existing queries refuse an unreachable record as "not found").
  */
 export async function targetOwner(scope: Scope, target: { contactId?: string | null; dealId?: string | null }): Promise<string> {
-  if (target.dealId) return (await dealOwner(scope, target.dealId)) ?? scope.userId;
-  if (target.contactId) return (await contactOwner(scope, target.contactId)) ?? scope.userId;
-  return scope.userId;
+  // Every record named must resolve to the same owner, so a shared deal can't carry someone's private contact along.
+  const owners = await Promise.all([
+    target.dealId ? dealOwner(scope, target.dealId) : undefined,
+    target.contactId ? contactOwner(scope, target.contactId) : undefined,
+  ]);
+  const named = owners.filter((o) => o !== undefined);
+  if (named.length === 0 || named.some((o) => o === null || o !== named[0])) return scope.userId;
+  return named[0] as string;
+}
+
+/** Keys for the CSV import's duplicate check: my contacts plus the workspace's shared ones (never someone's friends). */
+export async function importKeysScoped(scope: Scope): Promise<Set<string>> {
+  const keys = await listContactKeys(scope.userId);
+  if (member(scope)) for (const k of await listContactKeys(scope.workspaceId, { sharedOnly: true })) keys.add(k);
+  return keys;
 }
 
 /** Recent activity: mine plus what happened on shared Sooz records, newest first. */

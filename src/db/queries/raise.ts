@@ -196,7 +196,7 @@ export type WeekSummary = {
   nudges: { tractionStale: boolean; monthFactsStale: boolean };
 };
 
-/** soozOnly: deadlines from the Sooz feed only (what a workspace member sees; Personal/Career are the owner's). */
+/** soozOnly: what a workspace member sees: Sooz-feed deadlines only, and replies only on shared records. */
 export async function weekSummary(userId: string, now: Date = new Date(), options: { soozOnly?: boolean } = {}): Promise<WeekSummary> {
   const week = await currentWeek();
   const [list, gmail, watch, due, apps, replies, traction, update] = await Promise.all([
@@ -228,8 +228,9 @@ export async function weekSummary(userId: string, now: Date = new Date(), option
       `select c.name, a.summary, a.occurred_at as at, a.contact_id, a.deal_id, c.section::text as section
          from activities a join contacts c on c.id = a.contact_id
         where a.user_id = $1 and a.type = 'email' and a.summary like 'Replied%' and a.occurred_at > now() - interval '14 days'
+          and (not $2 or c.section <> 'general' or c.shared)
         order by a.occurred_at desc limit 20`,
-      [userId],
+      [userId, Boolean(options.soozOnly)],
     ),
     readSettings(userId, ["pitch.traction"]),
     db.$client.query<{ t: { reason: string } }>(`select rr_update_todo(current_date, $1) as t`, [userId]),

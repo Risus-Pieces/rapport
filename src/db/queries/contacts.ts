@@ -202,11 +202,11 @@ export async function listFollowUps(userId: string, now = new Date()) {
 }
 
 /** Dedupe keys (section plus email, or name when there is no email) of every contact the owner has. */
-export async function listContactKeys(userId: string): Promise<Set<string>> {
+export async function listContactKeys(userId: string, options: { sharedOnly?: boolean } = {}): Promise<Set<string>> {
   const rows = await db
     .select({ section: contacts.section, name: contacts.name, email: contacts.email })
     .from(contacts)
-    .where(eq(contacts.userId, userId));
+    .where(and(eq(contacts.userId, userId), options.sharedOnly ? sharedContact : undefined));
   return new Set(rows.map((r) => `${r.section}|${(r.email?.trim() || r.name.trim()).toLowerCase()}`));
 }
 

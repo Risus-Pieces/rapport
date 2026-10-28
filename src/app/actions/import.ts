@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { importContacts, listContactKeys } from "@/db/queries/contacts";
+import { importKeysScoped } from "@/db/queries/access";
+import { importContacts } from "@/db/queries/contacts";
 import { MAX_IMPORT_BYTES, planContactImport } from "@/lib/contact-import";
 import { CsvError, parseCsvTable } from "@/lib/csv";
 import { getScope } from "@/lib/scope";
@@ -28,9 +29,7 @@ export async function importContactsAction(prev: ImportState, formData: FormData
     const table = parseCsvTable(await file.text());
     if (!table.headers.includes("name")) return fail('The file needs a "name" column.', ran);
     // General rows are personal; Restaurants and Investors rows go to the shared workspace.
-    const keys = await listContactKeys(scope.userId);
-    if (scope.workspaceId !== scope.userId) for (const k of await listContactKeys(scope.workspaceId)) keys.add(k);
-    plan = planContactImport(table.rows, keys);
+    plan = planContactImport(table.rows, await importKeysScoped(scope));
   } catch (error) {
     if (error instanceof CsvError) return fail(error.message, ran);
     throw error;

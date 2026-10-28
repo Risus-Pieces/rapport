@@ -95,4 +95,28 @@ describe.skipIf(!hasDevDb)("scoped access for workspace members (runs against th
     expect(await a.generalCounts(member)).toMatchObject({ to_reach_out: 1, known: 1 });
     expect(await a.generalCounts(owner)).toMatchObject({ to_reach_out: 1, known: 1 });
   });
+
+  it("a shared deal paired with someone else's private contact is not a way in", async () => {
+    expect(await a.targetOwner(member, { dealId: w.deal, contactId: w.friend })).toBe(member.userId);
+    expect(await a.targetOwner(member, { dealId: w.deal, contactId: w.angel })).toBe(owner.userId);
+    expect(await a.targetOwner(member, { dealId: w.deal })).toBe(owner.userId);
+    expect(await a.targetOwner(owner, { dealId: w.deal, contactId: w.friend })).toBe(owner.userId);
+  });
+
+  it("CSV duplicate check sees the shared workspace but not the other person's friends", async () => {
+    const keys = await a.importKeysScoped(member);
+    expect(keys.has("investors|findable angel")).toBe(true);
+    expect(keys.has("general|findable creator")).toBe(true);
+    expect(keys.has("general|findable mo pal")).toBe(true);
+    expect(keys.has("general|findable friend")).toBe(false);
+    expect((await a.importKeysScoped(owner)).has("general|findable friend")).toBe(true);
+  });
+
+  it("This week replies show a member only replies on shared records", async () => {
+    const { weekSummary } = await import("@/db/queries/raise");
+    await q(`insert into activities (user_id, type, summary, contact_id) values ($1, 'email', 'Replied re: dinner', $2), ($1, 'email', 'Replied re: terms', $3)`, [owner.userId, w.friend, w.angel]);
+    const names = async (soozOnly: boolean) => (await weekSummary(owner.userId, new Date(), { soozOnly })).replies.map((r) => r.name).sort();
+    expect(await names(true)).toEqual(["Findable Angel"]);
+    expect(await names(false)).toEqual(["Findable Angel", "Findable Friend"]);
+  });
 });
