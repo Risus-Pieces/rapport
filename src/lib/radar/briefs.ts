@@ -245,12 +245,15 @@ pre-revenue OK and anything in Houston.`,
     browser: true,
     brief: `Read the owner's own LinkedIn and Instagram in Chrome (see "Browsing LinkedIn and Instagram") for posts that
 announce pitch competitions, pitch nights, founder prizes, grant competitions and accelerators with open applications.
-- LinkedIn: open the post search for each of these, sorted by latest: "pitch competition", "pitch competition"
-  applications open, "pitch competition" food beverage, "pitch competition" CPG, "student founders" pitch, "demo day"
-  founders, "accelerator" "applications open" CPG; read the results (scroll 2-3 times each). Then read the owner's home
-  feed (scroll about 8 times).
-- Instagram: open the keyword search for "pitch competition", "pitchcompetition", "pitch night", "startup
-  competition" and "CPG accelerator", and read the results; then read the owner's home feed (scroll about 8 times).
+- LinkedIn: open the post search for each of these, sorted by latest (plain "pitch competition" is mostly global tech
+  noise, so always pair it with a U.S. consumer angle): "pitch competition" CPG, "pitch competition" "food and
+  beverage", "pitch competition" beverage, "pitch competition" Texas, "pitch competition" "student founders", "Startup
+  CPG" pitch, "pitch slam" brands, "demo day" CPG, accelerator "applications open" CPG; read the results (scroll 2-3
+  times each). Then read the owner's home feed (scroll about 8 times).
+- Instagram: open the keyword search for "cpg pitch competition", "food pitch competition", "beverage pitch
+  competition", "pitch competition 2027", "student pitch competition" and "texas pitch competition"; then the owner's
+  home feed (scroll about 8 times). Instagram's text is in the images: take a screenshot and zoom on each poster, and
+  open a promising post (click its tile) to read its caption, then go back.
 - For each post that announces one, find the competition's own page (WebSearch / WebFetch, or the link in the post) and
   take the dates and eligibility from it. Use that page as url; only if it cannot be found, use the post's URL and add
   tag "verify-dates".
