@@ -18,6 +18,8 @@ export interface ResearchTask {
   /** Whether findings are time-boxed (events) — enables the "must be upcoming" rule. */
   upcomingOnly: boolean;
   maxSearches: number;
+  /** Runs in the owner's own Chrome (signed-in LinkedIn / Instagram), so the routine does it itself, never a subagent. */
+  browser?: boolean;
 }
 
 export const SOOZ_PROFILE = `Sooz is a pre-seed food and beverage consumer packaged goods (CPG) startup.
@@ -155,14 +157,12 @@ matter, but skip ones outside the U.S.). Many of the best ones are small, run on
   business-plan competition, founder prize, grant competition, fast pitch.
 - Industry and topic ones too: consumer, food & beverage, CPG, health and wellness, sustainability and social-impact
   competitions, and corporate-sponsored challenges.
-- Directories and listings: Devpost and F6S open calls (non-software ones count), Collegiate Entrepreneurs' Organization
-  events, Opportunity Desk / Youth Opportunities style roundups, ProFellow, university entrepreneurship-center calendars
-  across the country, intercollegiate competition directories, startup-week schedules, Luma and Eventbrite searches for
-  "pitch competition" (nationwide and virtual), accelerator and incubator newsletters, and "applications open" posts.
-- Follow the circuit: for competitions you find, open their past winners, finalists, judges and sponsors pages, then
-  search what else those winners won ("winner of", "finalist at", "placed at") and which other competitions the sponsors
-  and organizers run. Student founders list every competition they won on their sites and LinkedIn, which reveals the
-  small one-off competitions directories miss.
+- Directories and roundups: Collegiate Entrepreneurs' Organization events, Opportunity Desk / Youth Opportunities style
+  roundups, ProFellow, intercollegiate competition directories, startup-week schedules, accelerator and incubator
+  newsletters, and "applications open" posts. (Event platforms and campus calendars, past winners, and LinkedIn /
+  Instagram each have their own task this week; leave those to them.)
+- Follow sponsors and organizers: for competitions you find, check which other competitions their sponsors, judges and
+  organizers run.
 - WATCHLIST (given to you with this task): competitions already in the database whose last cycle is over or that have no
   dates. Check each one whose usual month is within the next three months or unknown (up to 15 per run): if its next
   cycle is announced, submit it as a new finding titled with the new year, with the new dates. Do not resubmit a
@@ -178,6 +178,91 @@ nights you just sign up for, and always add tag "pitch-competition". If a compet
 not announced yet, submit it with null dates and say in summary when it ran last time and when applications usually open.
 Score higher for real prize money or investor judges, student or young-founder eligibility, pre-revenue OK, and deadlines
 within three months; location does not change the score.`,
+  },
+  {
+    id: "sooz-winner-trail",
+    feed: SOOZ,
+    label: "Winner trail (what past winners also won)",
+    kinds: ["funding", "event"],
+    upcomingOnly: true,
+    maxSearches: 30,
+    brief: `Find the small, niche competitions that searches miss by following the brands that win them. Founders at Sooz's
+stage enter many little competitions and list them: "as seen at" and awards sections on their websites, press pages,
+LinkedIn posts like "excited to be a finalist at ...", and local news write-ups.
+- TRAIL (given to you with this task): up to 8 competitions already in the database. For each one, find its past
+  winners and finalists (the competition's winners / finalists / cohort pages, its announcement posts, news coverage of
+  the pitch day). Prefer consumer, food & beverage, CPG and student-founder brands.
+- For 3-5 of those brands per competition, open their website's press / awards / about pages and search
+  "<brand> finalist", "<brand> pitch competition", "<brand> winner", "<founder> pitch competition". Note every other
+  competition, pitch night, prize, grant competition or accelerator they name.
+- Check each one you found: is a next cycle open or upcoming as of TODAY? Look it up on its own site for dates and
+  eligibility. Also follow one more hop when a brand's list is long: the winners of what you just found.
+One competition per item, titled with its name and year, never one already in KNOWN. Pre-revenue and pre-launch
+eligibility matters: skip ones that require revenue, a Series A, or a product already on shelves, and say "pre-revenue OK"
+in summary when the rules allow it. In summary give the prize (cash or in-kind), who can enter, the format (in person
+where, or virtual) and the key dates; put the application deadline in deadline and the pitch-day date in event_date.
+Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch nights you just
+sign up for, and always add tag "pitch-competition". If it runs every year but the next cycle is not announced, submit
+it with null dates and say in summary when it ran last and when applications usually open. Add tag "winner-trail", and in why_relevant say how you found it ("<brand>, a past <competition> finalist,
+also placed here"). Score higher for prize money, young or student founders, pre-revenue OK and deadlines within three
+months.`,
+  },
+  {
+    id: "sooz-event-platforms",
+    feed: SOOZ,
+    label: "Event platforms & campus calendars",
+    kinds: ["funding", "event"],
+    upcomingOnly: true,
+    maxSearches: 25,
+    brief: `Sweep the places where small pitch nights and competitions are listed but barely indexed by Google. For each,
+search the platform itself (open its search or listing pages with WebFetch; when a page shows nothing useful, fall back
+to site: searches) for "pitch competition", "pitch night", "pitch", "demo day", "startup competition", "founder
+showcase" and "food and beverage" / "CPG" startup events, in Houston, Texas and online first, then the rest of the U.S.:
+- Luma (luma.com / lu.ma: city calendars and event pages), Eventbrite, Meetup, F6S open programs, Devpost (non-software
+  challenges count), Startup Grind and 1 Million Cups chapters, Collegiate Entrepreneurs' Organization events.
+- University entrepreneurship-center calendars and their competitions open to students from any school: Rice (Lilie),
+  University of Houston (Wolff Center / RED Labs), UT Austin (Texas Venture Labs, Longhorn), Texas A&M (McFerrin),
+  Baylor, SMU, TCU, Texas State, Texas Tech and UTSA in Texas, then large national ones (Harvard, MIT, Stanford,
+  Berkeley SkyDeck, Northwestern, Michigan, Babson, Wharton) and any intercollegiate competition they list.
+- City and regional startup calendars: Houston Exponential, Station Houston / The Ion, Capital Factory, Startup Grind
+  Houston, Houston startup week and similar calendars in Dallas, Austin and San Antonio.
+One competition per item, titled with its name and year, never one already in KNOWN. Pre-revenue and pre-launch
+eligibility matters: skip ones that require revenue, a Series A, or a product already on shelves, and say "pre-revenue OK"
+in summary when the rules allow it. In summary give the prize (cash or in-kind), who can enter, the format (in person
+where, or virtual) and the key dates; put the application deadline in deadline and the pitch-day date in event_date.
+Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch nights you just
+sign up for, and always add tag "pitch-competition". If it runs every year but the next cycle is not announced, submit
+it with null dates and say in summary when it ran last and when applications usually open. Add tag "platform-sweep". Score higher for open applications, prize money, young or student founders,
+pre-revenue OK and anything in Houston.`,
+  },
+  {
+    id: "sooz-social",
+    feed: SOOZ,
+    label: "LinkedIn & Instagram (owner's accounts)",
+    kinds: ["funding", "event"],
+    upcomingOnly: true,
+    maxSearches: 10,
+    browser: true,
+    brief: `Read the owner's own LinkedIn and Instagram in Chrome (see "Browsing LinkedIn and Instagram") for posts that
+announce pitch competitions, pitch nights, founder prizes, grant competitions and accelerators with open applications.
+- LinkedIn: open the post search for each of these, sorted by latest: "pitch competition", "pitch competition"
+  applications open, "pitch competition" food beverage, "pitch competition" CPG, "student founders" pitch, "demo day"
+  founders, "accelerator" "applications open" CPG; read the results (scroll 2-3 times each). Then read the owner's home
+  feed (scroll about 8 times).
+- Instagram: open the keyword search for "pitch competition", "pitchcompetition", "pitch night", "startup
+  competition" and "CPG accelerator", and read the results; then read the owner's home feed (scroll about 8 times).
+- For each post that announces one, find the competition's own page (WebSearch / WebFetch, or the link in the post) and
+  take the dates and eligibility from it. Use that page as url; only if it cannot be found, use the post's URL and add
+  tag "verify-dates".
+One competition per item, titled with its name and year, never one already in KNOWN. Pre-revenue and pre-launch
+eligibility matters: skip ones that require revenue, a Series A, or a product already on shelves, and say "pre-revenue OK"
+in summary when the rules allow it. In summary give the prize (cash or in-kind), who can enter, the format (in person
+where, or virtual) and the key dates; put the application deadline in deadline and the pitch-day date in event_date.
+Use kind "funding" when there is an application with a prize or investment, kind "event" for open pitch nights you just
+sign up for, and always add tag "pitch-competition". If it runs every year but the next cycle is not announced, submit
+it with null dates and say in summary when it ran last and when applications usually open. Add tag "from-social" plus "linkedin" or "instagram", and in why_relevant say whose post it came from (the
+organizer or brand, never a private person's name). Score higher for prize money, young or student founders, pre-revenue
+OK and deadlines within three months.`,
   },
   {
     id: "sooz-resources",

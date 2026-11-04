@@ -30,6 +30,24 @@ describe("routine prompts", () => {
     expect(p).toContain("added_to_crm");
   });
 
+  it("research: the winner trail gets the weekly trail list from rr_competition_watch", () => {
+    const p = buildResearchRoutinePrompt(["sooz"]);
+    expect(p).toMatch(/`trail` \(the TRAIL/);
+    expect(p).toMatch(/to the `sooz-winner-trail` task/);
+  });
+
+  it("research: LinkedIn and Instagram are read in the owner's Chrome by the routine itself, read-only, never by subagents", () => {
+    const p = buildResearchRoutinePrompt(["sooz"]);
+    expect(p).toContain("Claude in Chrome");
+    expect(p).toMatch(/only for the `sooz-social` task/);
+    expect(p).toMatch(/Do not give `sooz-social` to a subagent/);
+    expect(p).toMatch(/Never like, react, comment, repost, share, follow, connect, message/);
+    expect(p).toMatch(/never type a password/i);
+    expect(p).toMatch(/signed out/);
+    const thursday = buildResearchRoutinePrompt(["personal", "career"]);
+    expect(thursday).not.toContain("Claude in Chrome");
+  });
+
   it("research: Thursday covers Personal and Career, with context for both", () => {
     const p = buildResearchRoutinePrompt(["personal", "career"]);
     expect(p).toContain("RESEARCH job (Personal & Career)");

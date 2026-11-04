@@ -18,7 +18,7 @@ describe.skipIf(!hasDevDb)("competition watchlist and owner-added opportunities 
     one(`insert into radar_items (user_id, feed, kind, title, url, score, status, deadline, tags, dedupe_key, summary)
          values ($1, 'sooz', 'funding', $2, 'https://x.com/' || $3, 70, $4, $5::date, $6, $3, 'A pitch competition.')`,
       [owner, title, title.toLowerCase().replace(/\W+/g, "-"), x.status ?? "new", x.deadline ?? null, x.tags ?? ["pitch-competition"]]);
-  type Watch = { due: { series: string; title: string; usual_month: string | null }[]; seeds: { title: string }[] };
+  type Watch = { due: { series: string; title: string; usual_month: string | null }[]; seeds: { title: string }[]; trail: { title: string; url: string }[] };
   const watch = async () => (await one<{ w: Watch }>(`select rr_competition_watch($1) as w`, [owner])).w;
 
   beforeAll(async () => {
@@ -76,5 +76,20 @@ describe.skipIf(!hasDevDb)("competition watchlist and owner-added opportunities 
       .toMatchObject({ ok: false });
     expect(await o.addOpportunity(owner, { feed: "sooz", kind: "event", title: "No Link", url: "not a url" })).toMatchObject({ ok: false });
     expect((await watch()).seeds.map((x) => x.title)).toContain("NextGen Summit Pitch Competition 2026");
+  });
+
+  it("hands the winner trail a weekly rotation of competitions to trace, upcoming ones included, owner's picks first", async () => {
+    for (let i = 1; i <= 12; i++) await comp(`Trail Pitch ${i}`, { deadline: day(i * 20) });
+    await comp("Applied Trail Cup", { deadline: day(-10), status: "applied" });
+    await comp("Dismissed Trail Prize", { status: "dismissed" });
+    await comp("Grocer Trail Accelerator", { tags: ["accelerator"] });
+    const { trail } = await watch();
+    expect(trail).toHaveLength(8);
+    expect(trail[0]).toMatchObject({ title: "Applied Trail Cup", url: "https://x.com/applied-trail-cup" });
+    expect(trail.map((x) => x.title)).not.toContain("Dismissed Trail Prize");
+    expect(trail.map((x) => x.title)).not.toContain("Grocer Trail Accelerator");
+    expect(new Set(trail.map((x) => x.title)).size).toBe(8);
+    // Same week, same rotation.
+    expect((await watch()).trail).toEqual(trail);
   });
 });
