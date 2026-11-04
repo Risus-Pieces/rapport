@@ -37,6 +37,29 @@ describe("research tasks", () => {
     expect(t.brief).toMatch(/SEEDS/);
     expect(t.brief).not.toMatch(/Houston\/Texas or virtual/);
   });
+  it("traces past winners of known competitions to the small ones they also won", () => {
+    const t = TASKS.find((x) => x.id === "sooz-winner-trail")!;
+    expect(t).toMatchObject({ feed: "sooz", kinds: ["funding", "event"], upcomingOnly: true });
+    expect(t.maxSearches).toBeGreaterThanOrEqual(25);
+    expect(t.brief).toMatch(/TRAIL/);
+    expect(t.brief).toMatch(/finalists/);
+    expect(t.brief).toMatch(/tag "winner-trail"/);
+    expect(t.brief).toMatch(/tag "pitch-competition"/);
+  });
+  it("sweeps event platforms and campus calendars Google barely indexes", () => {
+    const t = TASKS.find((x) => x.id === "sooz-event-platforms")!;
+    expect(t).toMatchObject({ feed: "sooz", kinds: ["funding", "event"], upcomingOnly: true });
+    for (const site of ["Luma", "Eventbrite", "Meetup", "F6S", "Devpost"]) expect(t.brief).toContain(site);
+    expect(t.brief).toMatch(/entrepreneurship/);
+  });
+  it("reads the owner's LinkedIn and Instagram in the browser, read-only, and only that task does", () => {
+    const t = TASKS.find((x) => x.id === "sooz-social")!;
+    expect(t).toMatchObject({ feed: "sooz", kinds: ["funding", "event"], browser: true });
+    expect(t.brief).toMatch(/LinkedIn/);
+    expect(t.brief).toMatch(/Instagram/);
+    expect(t.brief).toMatch(/tag "from-social"/);
+    expect(TASKS.filter((x) => x.browser).map((x) => x.id)).toEqual(["sooz-social"]);
+  });
   it("hunts retail accelerators and retailer programs, tagged and watched like competitions", () => {
     const t = TASKS.find((x) => x.id === "sooz-resources")!;
     expect(t.brief).toMatch(/tag "accelerator"/);
