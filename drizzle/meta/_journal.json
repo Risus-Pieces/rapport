@@ -176,6 +176,13 @@
       "when": 1793777488888,
       "tag": "0024_winner_trail",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793916881213,
+      "tag": "0025_api_tokens",
+      "breakpoints": true
     }
   ]
 }

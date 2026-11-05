@@ -398,3 +398,22 @@ export const members = pgTable(
     index("members_workspace_idx").on(t.workspaceId),
   ],
 );
+
+/**
+ * Personal API tokens for agents (the /api/mcp endpoint). A token acts as the user who made it, with the same
+ * shared-workspace and personal scoping as the app. Only a SHA-256 hash is stored; the token is shown once.
+ */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: pk(),
+    userId: ownerId(),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    prefix: text("prefix").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("api_tokens_hash_idx").on(t.tokenHash), index("api_tokens_user_idx").on(t.userId)],
+);
