@@ -14,6 +14,9 @@ import { addMemberAction, removeMemberAction } from "@/app/actions/members";
 import { listMembers } from "@/db/queries/members";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 import { getScope } from "@/lib/scope";
+import { ApiTokenForm } from "@/components/api-token-form";
+import { revokeApiTokenAction } from "@/app/actions/api-tokens";
+import { listApiTokens } from "@/db/queries/api-tokens";
 import { requireSession } from "@/lib/session";
 
 export const metadata = { title: "Settings" };
@@ -34,14 +37,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const session = await requireSession();
   const sp = await searchParams;
   const scope = await getScope();
-  const [pitch, net, team] = await Promise.all([
+  const [pitch, net, team, tokens] = await Promise.all([
     getPitch(scope.workspaceId),
     networkSize(scope.userId),
     scope.isOwner ? listMembers(scope.userId) : Promise.resolve([]),
+    listApiTokens(scope.userId),
   ]);
   const err = one(sp.err);
   const ok =
-    one(sp.member) === "added"
+    one(sp.token) === "revoked"
+      ? "Token revoked. Agents using it are locked out."
+      : one(sp.member) === "added"
       ? "Added. They can sign in now with that email and password."
       : one(sp.member) === "removed"
         ? "Removed."
@@ -238,6 +244,38 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </p>
           </Card>
         ) : null}
+
+        <Card id="api-tokens" className="scroll-mt-6 gap-4 p-5">
+          <div className="space-y-1">
+            <h2 className="font-medium">API tokens</h2>
+            <p className="text-sm text-muted-foreground">
+              Let an agent (Claude and the like) read and update Rapport as you, through the MCP endpoint{" "}
+              <code>/api/mcp</code> with the header <code>Authorization: Bearer &lt;token&gt;</code>. It sees what you
+              see: shared Sooz work plus your own contacts and opportunities.
+            </p>
+          </div>
+          {tokens.length ? (
+            <ul className="divide-y divide-border text-sm">
+              {tokens.map((t) => (
+                <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span>
+                    <span className="font-medium">{t.name}</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t.prefix}… · {t.lastUsedAt ? `last used ${t.lastUsedAt.toLocaleDateString("en-US")}` : "never used"}
+                    </span>
+                  </span>
+                  <form action={revokeApiTokenAction}>
+                    <input type="hidden" name="id" value={t.id} />
+                    <Button type="submit" variant="ghost" size="lg">
+                      Revoke
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <ApiTokenForm />
+        </Card>
 
         <Card className="gap-2 p-5">
           <h2 className="font-medium">Account</h2>

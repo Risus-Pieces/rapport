@@ -159,3 +159,45 @@ export async function addOpportunity(userId: string, input: NewOpportunity): Pro
     .returning({ id: radarItems.id });
   return row ? { ok: true, id: row.id } : { ok: false, error: "That's already in Opportunities." };
 }
+
+export type OpportunityEdit = {
+  title?: string;
+  url?: string;
+  deadline?: string | null;
+  eventDate?: string | null;
+  notes?: string;
+  location?: string | null;
+};
+
+/** Edit an opportunity's facts (never a person). Undefined fields are left alone; null clears a date or location. */
+export async function updateOpportunity(userId: string, id: string, e: OpportunityEdit): Promise<{ ok: true } | { ok: false; error: string }> {
+  const set: Partial<typeof radarItems.$inferInsert> = {};
+  if (e.title !== undefined) {
+    const title = e.title.trim().slice(0, 160);
+    if (!title) return { ok: false, error: "The name can't be empty." };
+    set.title = title;
+  }
+  if (e.url !== undefined) {
+    try {
+      if (!/^https?:$/.test(new URL(e.url.trim()).protocol)) throw new Error("bad");
+    } catch {
+      return { ok: false, error: "The link must start with https://." };
+    }
+    set.url = e.url.trim();
+  }
+  for (const key of ["deadline", "eventDate"] as const) {
+    const v = e[key];
+    if (v === undefined) continue;
+    if (v !== null && !DAY.test(v)) return { ok: false, error: `${key} must be YYYY-MM-DD.` };
+    set[key] = v;
+  }
+  if (e.notes !== undefined) set.notes = e.notes.trim().slice(0, 4000);
+  if (e.location !== undefined) set.location = e.location?.trim().slice(0, 200) || null;
+  if (Object.keys(set).length === 0) return { ok: true };
+  const rows = await db
+    .update(radarItems)
+    .set(set)
+    .where(and(eq(radarItems.userId, userId), eq(radarItems.id, id), notPerson))
+    .returning({ id: radarItems.id });
+  return rows.length > 0 ? { ok: true } : { ok: false, error: "Opportunity not found." };
+}
