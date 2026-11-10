@@ -104,6 +104,18 @@ Public sign-up is closed; the seed script is the only way to create the owner.
 | `npm run db:generate` | Generate a migration after editing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations to the branch in `DATABASE_URL_UNPOOLED` |
 
+## Agents (MCP)
+
+Rapport is also an MCP server at `/api/mcp` (Streamable HTTP, stateless JSON). An agent authenticates with a personal
+API token (`Authorization: Bearer rpt_…`) made in **Settings → API tokens** or with `npm run create:api-token -- <email> <name>`.
+It acts as that user with the app's scoping: shared Sooz work plus the user's own General contacts and Personal/Career
+opportunities. Only a SHA-256 hash of each token is stored; revoking it in Settings locks the agent out at once.
+
+Tools: `whoami`, `search`, `list_opportunities`, `add_opportunity`, `update_opportunity`, `list_tasks`, `create_task`,
+`complete_task`, `list_deals`, `get_deal`, `move_deal`, `list_contacts`, `get_contact`, `log_activity`.
+
+Claude Code: `claude mcp add --transport http rapport https://<your-domain>/api/mcp --header "Authorization: Bearer rpt_…"`.
+
 ## Deploying (Vercel)
 
 These steps are for you to run; they need your Vercel and Neon accounts.

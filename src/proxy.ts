@@ -8,8 +8,9 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+// /api/mcp authenticates with its own bearer tokens, so the login redirect must not catch it.
 export const config = {
   matcher: [
-    "/((?!login(?:/|$)|api/auth(?:/|$)|_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)",
+    "/((?!login(?:/|$)|api/auth(?:/|$)|api/mcp(?:/|$)|_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)",
   ],
 };
