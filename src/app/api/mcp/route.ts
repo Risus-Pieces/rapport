@@ -31,6 +31,11 @@ async function handle(request: Request): Promise<Response> {
   }
 }
 
+// GET would open a standalone SSE stream. This stateless server never pushes on one, and on serverless it ends at once,
+// so MCP clients reconnected every few seconds, all day, and burned Vercel CPU (plus a token lookup each time).
+// The MCP spec lets a server answer 405 here; clients then stop asking. Checked before auth so it costs nothing.
+const noStream = () => new Response(null, { status: 405, headers: { Allow: "POST, DELETE" } });
+
 export const POST = handle;
-export const GET = handle;
+export const GET = noStream;
 export const DELETE = handle;

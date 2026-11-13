@@ -72,6 +72,13 @@ describe.skipIf(!hasDevDb)("MCP endpoint (runs against the Neon dev branch)", ()
     if (db && s && users.length) await db.delete(s.user).where(inArray(s.user.id, users));
   });
 
+  it("answers GET with 405 and no stream, so clients stop reconnecting it", async () => {
+    const res = route.GET();
+    expect(res.status).toBe(405);
+    expect(res.headers.get("allow")).toBe("POST, DELETE");
+    expect(res.headers.get("content-type") ?? "").not.toContain("text/event-stream");
+  });
+
   it("refuses requests without a valid, live token", async () => {
     const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
